@@ -1,0 +1,20 @@
+# Environment variables and secrets
+.env
+.env.*
+!.env.example
+*.key
+*.pem
+*secret*
+
+# Homepage runtime files
+config/logs/
+config/*.log
+
+# Local backups
+*.bak
+*.backup
+
+# OS/editor files
+.DS_Store
+Thumbs.db
+.vscode/
