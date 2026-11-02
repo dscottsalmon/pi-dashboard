@@ -1,7 +1,21 @@
 ---
-# For configuration options and examples, please see:
-# https://gethomepage.dev/configs/settings/
+title: Pi Server
+description: Personal Infrastructure Dashboard
 
-providers:
-  openweathermap: openweathermapapikey
-  weatherapi: weatherapiapikey
+theme: dark
+color: slate
+
+headerStyle: clean
+
+layout:
+  Infrastructure:
+    style: row
+    columns: 3
+
+  Tailscale Network:
+    style: row
+    columns: 3
+
+  Personal Services:
+    style: row
+    columns: 3

@@ -2,17 +2,36 @@
 # For configuration options and examples, please see:
 # https://gethomepage.dev/configs/services/
 
-- My First Group:
-    - My First Service:
-        href: http://localhost/
-        description: Homepage is awesome
+- Infrastructure:
+    - Pi-hole:
+        icon: pi-hole.png
+        href: http://pihole-server.local/admin/
+        description: DNS and network management
+        siteMonitor: http://192.168.0.2/admin/
 
-- My Second Group:
-    - My Second Service:
-        href: http://localhost/
-        description: Homepage is the best
+    - File Server:
+        icon: mdi-folder-network
+        description: Samba network storage
+        href: http://pihole-server.local:3000
 
-- My Third Group:
-    - My Third Service:
-        href: http://localhost/
-        description: Homepage is 😎
+    - Docker:
+        icon: docker.png
+        description: Container management
+        href: http://pihole-server.local:3000
+
+- Tailscale Network:
+    - Tailscale:
+        icon: tailscale.png
+        href: https://login.tailscale.com/admin/machines
+        description: VPN and connected devices
+
+- Personal Services:
+    - GitHub:
+        icon: github.png
+        href: https://github.com/dscottsalmon/pi-dashboard
+        description: Pi Dashboard repository
+
+    - YouTube:
+        icon: youtube.png
+        href: https://youtube.com
+        description: Videos and subscriptions
