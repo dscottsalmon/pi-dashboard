@@ -8,4 +8,19 @@ services:
       HOMEPAGE_ALLOWED_HOSTS: "pihole-server.local:3000,localhost:3000,192.168.0.2:3000"
     volumes:
       - ./config:/app/config
+      - /:/host-root:ro
+      - /mnt/storage:/host-storage:ro
     restart: unless-stopped
+
+  glances:
+    image: nicolargo/glances:latest-full
+    container_name: glances
+    restart: unless-stopped
+    pid: host
+    environment:
+      GLANCES_OPT: "-w"
+    volumes:
+      - /etc/os-release:/etc/os-release:ro
+      - /sys:/sys:ro
+      - /proc:/host/proc:ro
+      - /mnt/storage:/mnt/storage:ro

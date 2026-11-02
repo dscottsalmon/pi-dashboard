@@ -1,8 +1,12 @@
 ---
-- resources:
+- glances:
+    url: http://glances:61208
+    version: 4
     label: Raspberry Pi
     cpu: true
-    memory: true
-    disk: /
+    mem: true
+    cputemp: true
     uptime: true
-    units: metric
+    disk:
+      - /etc/hostname
+      - /mnt/storage

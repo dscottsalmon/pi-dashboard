@@ -2,7 +2,63 @@
 # For configuration options and examples, please see:
 # https://gethomepage.dev/configs/services/
 
+# Raspberry Pi Dashboard
+
 - Infrastructure:
+    - CPU:
+        icon: mdi-cpu-64-bit
+        description: Processor utilization
+        widget:
+          type: glances
+          url: http://glances:61208
+          version: 4
+          metric: cpu
+
+    - Memory:
+        icon: mdi-memory
+        description: RAM and swap usage
+        widget:
+          type: glances
+          url: http://glances:61208
+          version: 4
+          metric: memory
+
+    - Temperature:
+        icon: mdi-thermometer
+        description: Raspberry Pi CPU temperature
+        widget:
+          type: glances
+          url: http://glances:61208
+          version: 4
+          metric: "sensor:cpu_thermal 0"
+
+    - Network:
+        icon: mdi-lan
+        description: Ethernet network traffic
+        widget:
+          type: glances
+          url: http://glances:61208
+          version: 4
+          metric: "network:eth0"
+
+    - SD Card:
+        icon: mdi-sd
+        description: Raspberry Pi system storage
+        widget:
+          type: glances
+          url: http://glances:61208
+          version: 4
+          metric: "fs:/etc/hostname"
+
+    - External Drive:
+        icon: mdi-harddisk
+        description: USB media storage
+        widget:
+          type: glances
+          url: http://glances:61208
+          version: 4
+          metric: "fs:/mnt/storage"
+
     - Pi-hole:
         icon: pi-hole.png
         href: http://pihole-server.local/admin/

@@ -1,0 +1,52 @@
+/* Center the top resource bar */
+#information-widgets {
+  justify-content: center !important;
+}
+
+/* Increase spacing between individual metrics */
+#information-widgets .information-widget-resource {
+  margin-right: 85px !important;
+}
+
+/* Remove extra spacing after the final metric */
+#information-widgets .information-widget-resource:last-child {
+  margin-right: 0 !important;
+}
+
+/* Larger resource icons */
+#information-widgets svg {
+  width: 28px;
+  height: 28px;
+}
+
+/* Allow the resource bar to use the full browser width */
+.information-widget-glances {
+  width: 100% !important;
+  max-width: none !important;
+}
+
+/* Center the individual metrics */
+.information-widget-glances > div:first-child {
+  display: flex !important;
+  justify-content: center !important;
+  width: 100% !important;
+}
+
+/* Expand the header container to the viewport width */
+.container:has(.information-widget-glances) {
+  max-width: 100% !important;
+  width: 100% !important;
+}
+/* Stack drive name above storage values */
+.information-widget-glances .custom-storage-widget .resource-value {
+  order: 2;
+}
+
+.information-widget-glances .custom-storage-widget .resource-value + div {
+  order: 1;
+}
+
+/* Give storage metrics a little more breathing room */
+.information-widget-glances .custom-storage-widget > div {
+  min-width: 150px;
+}
