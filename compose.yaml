@@ -3,7 +3,7 @@ services:
     image: ghcr.io/gethomepage/homepage:latest
     container_name: homepage
     environment:
-      HOMEPAGE_ALLOWED_HOSTS: "pihole-server.local:3000,localhost:3000,192.168.0.2:3000"
+      HOMEPAGE_ALLOWED_HOSTS: "pihole-server.local:3000,localhost:3000,192.168.0.2:3000,100.93.56.57:3000,pihole-server:3000"
     volumes:
       - ./config:/app/config
       - /:/host-root:ro
