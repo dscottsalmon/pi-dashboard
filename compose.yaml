@@ -2,8 +2,6 @@ services:
   homepage:
     image: ghcr.io/gethomepage/homepage:latest
     container_name: homepage
-    ports:
-      - "3000:3000"
     environment:
       HOMEPAGE_ALLOWED_HOSTS: "pihole-server.local:3000,localhost:3000,192.168.0.2:3000"
     volumes:
@@ -24,3 +22,25 @@ services:
       - /sys:/sys:ro
       - /proc:/host/proc:ro
       - /mnt/storage:/mnt/storage:ro
+
+  internet-status:
+    image: python:3.13-alpine
+    container_name: internet-status
+    restart: unless-stopped
+    working_dir: /app
+    command: ["python", "-u", "status_api.py"]
+    volumes:
+      - ./monitor/status_api.py:/app/status_api.py:ro
+      - /var/lib/pi-dashboard:/data:ro
+
+  proxy:
+    image: caddy:2-alpine
+    container_name: dashboard-proxy
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./proxy/Caddyfile:/etc/caddy/Caddyfile:ro
+    depends_on:
+      - homepage
+      - internet-status

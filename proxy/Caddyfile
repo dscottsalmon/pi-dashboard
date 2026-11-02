@@ -1,0 +1,15 @@
+:3000 {
+    handle /internet-status {
+        rewrite * /status
+        reverse_proxy internet-status:8080
+    }
+
+    handle /glances-memory {
+        rewrite * /api/4/mem
+        reverse_proxy glances:61208
+    }
+
+    handle {
+        reverse_proxy homepage:3000
+    }
+}

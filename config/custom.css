@@ -1,52 +1,289 @@
-/* Center the top resource bar */
-#information-widgets {
-  justify-content: center !important;
-}
 
-/* Increase spacing between individual metrics */
-#information-widgets .information-widget-resource {
-  margin-right: 85px !important;
-}
+/* ==========================================
+   Scott's Pi-Server — Homepage Custom CSS
+   ========================================== */
 
-/* Remove extra spacing after the final metric */
-#information-widgets .information-widget-resource:last-child {
-  margin-right: 0 !important;
-}
+/* ------------------------------------------
+   1. Resource Bar Layout
+   ------------------------------------------ */
 
-/* Larger resource icons */
-#information-widgets svg {
-  width: 28px;
-  height: 28px;
-}
-
-/* Allow the resource bar to use the full browser width */
-.information-widget-glances {
-  width: 100% !important;
-  max-width: none !important;
-}
-
-/* Center the individual metrics */
-.information-widget-glances > div:first-child {
-  display: flex !important;
-  justify-content: center !important;
-  width: 100% !important;
-}
-
-/* Expand the header container to the viewport width */
 .container:has(.information-widget-glances) {
   max-width: 100% !important;
   width: 100% !important;
 }
-/* Stack drive name above storage values */
-.information-widget-glances .custom-storage-widget .resource-value {
-  order: 2;
+
+#information-widgets {
+  justify-content: center !important;
 }
 
-.information-widget-glances .custom-storage-widget .resource-value + div {
-  order: 1;
+.information-widget-glances {
+  width: 100% !important;
+  max-width: none !important;
+  cursor: default !important;
+  text-decoration: none !important;
 }
 
-/* Give storage metrics a little more breathing room */
-.information-widget-glances .custom-storage-widget > div {
+/* Desktop: 4 metrics above, 3 centered below */
+.information-widget-glances > div:first-child {
+  display: grid !important;
+  grid-template-columns: repeat(8, minmax(0, 1fr)) !important;
+  column-gap: 12px !important;
+  row-gap: 24px !important;
+  width: 100% !important;
+  max-width: 950px !important;
+  margin: 0 auto !important;
+}
+
+#information-widgets .information-widget-resource {
+  margin-right: 0 !important;
+  justify-content: center !important;
+  min-width: 0;
+}
+
+/* Desktop row 1 */
+.information-widget-glances .information-widget-resource:nth-child(1) {
+  grid-column: 1 / 3;
+  grid-row: 1;
+}
+
+.information-widget-glances .information-widget-resource:nth-child(2) {
+  grid-column: 3 / 5;
+  grid-row: 1;
+}
+
+.information-widget-glances .information-widget-resource:nth-child(3) {
+  grid-column: 5 / 7;
+  grid-row: 1;
+}
+
+.information-widget-glances .information-widget-resource:nth-child(4) {
+  grid-column: 7 / 9;
+  grid-row: 1;
+}
+
+/* Desktop row 2 */
+.information-widget-glances .information-widget-resource:nth-child(5) {
+  grid-column: 2 / 4;
+  grid-row: 2;
+}
+
+.information-widget-glances .information-widget-resource:nth-child(6) {
+  grid-column: 4 / 6;
+  grid-row: 2;
+}
+
+.information-widget-glances #internet-uptime-widget {
+  grid-column: 6 / 8;
+  grid-row: 2;
+}
+
+/* ------------------------------------------
+   2. Icons
+   ------------------------------------------ */
+
+#information-widgets .resource-icon {
+  width: 28px !important;
+  height: 28px !important;
+  flex-shrink: 0;
+}
+
+/* CPU */
+#information-widgets
+.information-widget-resource:nth-child(1) .resource-icon {
+  color: #60a5fa !important;
+}
+
+/* RAM */
+#information-widgets
+.information-widget-resource:nth-child(2) .resource-icon {
+  color: #a78bfa !important;
+}
+
+/* SD Card */
+#information-widgets
+.information-widget-resource:nth-child(3) .resource-icon {
+  color: #fbbf24 !important;
+}
+
+/* External Drive */
+#information-widgets
+.information-widget-resource:nth-child(4) .resource-icon {
+  color: #2dd4bf !important;
+}
+
+/* Temperature */
+#information-widgets
+.information-widget-resource:nth-child(5) .resource-icon {
+  color: #fb923c !important;
+}
+
+/* Pi Uptime */
+#information-widgets
+.information-widget-resource:nth-child(6) .resource-icon {
+  color: #cbd5e1 !important;
+}
+
+/* Internet Uptime */
+#information-widgets
+#internet-uptime-widget .resource-icon {
+  color: #4ade80 !important;
+}
+
+/* ------------------------------------------
+   3. Storage and RAM
+   ------------------------------------------ */
+
+.information-widget-glances
+.custom-storage-widget > div,
+.information-widget-glances
+.custom-ram-widget > div {
   min-width: 150px;
+}
+
+/* ------------------------------------------
+   4. Uptime Widgets and Labels
+   ------------------------------------------ */
+
+.information-widget-glances
+.information-widget-resource:nth-child(6),
+.information-widget-glances
+#internet-uptime-widget {
+  align-items: center;
+}
+
+.information-widget-glances
+.information-widget-resource:nth-child(6) .resource-usage,
+.information-widget-glances
+#internet-uptime-widget .resource-usage {
+  display: none !important;
+}
+
+/* Center Scott's Pi-Server title */
+.information-widget-glances .information-widget-label {
+  display: block !important;
+  width: 100% !important;
+  max-width: none !important;
+  margin: 12px auto 0 !important;
+  padding: 0 !important;
+  text-align: center !important;
+  transform: none !important;
+}
+
+/* Desktop-only spacing adjustment */
+.information-widget-glances
+.information-widget-resource:nth-child(5) {
+  transform: translateX(35px);
+}
+
+.information-widget-glances
+#internet-uptime-widget {
+  transform: translateX(-35px);
+}
+
+/* ------------------------------------------
+   5. Coloured Progress Bars
+   ------------------------------------------ */
+
+/* CPU */
+#information-widgets
+.information-widget-resource:nth-child(1)
+.resource-usage > div {
+  background-color: #60a5fa !important;
+}
+
+/* RAM */
+#information-widgets
+.information-widget-resource:nth-child(2)
+.resource-usage > div {
+  background-color: #a78bfa !important;
+}
+
+/* SD Card */
+#information-widgets
+.information-widget-resource:nth-child(3)
+.resource-usage > div {
+  background-color: #fbbf24 !important;
+}
+
+/* External Drive */
+#information-widgets
+.information-widget-resource:nth-child(4)
+.resource-usage > div {
+  background-color: #2dd4bf !important;
+}
+
+/* Temperature */
+#information-widgets
+.information-widget-resource:nth-child(5)
+.resource-usage > div {
+  background-color: #fb923c !important;
+}
+
+/* ------------------------------------------
+   6. Tablet / Narrow Window
+   601px - 900px
+   ------------------------------------------ */
+
+@media (min-width: 601px) and (max-width: 900px) {
+
+  .information-widget-glances > div:first-child {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    max-width: 600px !important;
+    column-gap: 20px !important;
+    row-gap: 22px !important;
+  }
+
+  /* Reset desktop positioning */
+  .information-widget-glances
+  .information-widget-resource {
+    grid-column: auto !important;
+    grid-row: auto !important;
+    transform: none !important;
+  }
+
+  /* Center the seventh metric */
+  .information-widget-glances
+  #internet-uptime-widget {
+    grid-column: 1 / -1 !important;
+    justify-self: center;
+  }
+}
+
+/* ------------------------------------------
+   7. Phone
+   600px and below
+   ------------------------------------------ */
+
+@media (max-width: 600px) {
+
+  .information-widget-glances > div:first-child {
+    grid-template-columns: minmax(0, 1fr) !important;
+    max-width: 360px !important;
+    row-gap: 18px !important;
+  }
+
+  /* Reset desktop positioning */
+  .information-widget-glances
+  .information-widget-resource {
+    grid-column: 1 !important;
+    grid-row: auto !important;
+    transform: none !important;
+    justify-self: center;
+  }
+
+  .information-widget-glances
+  .custom-storage-widget > div,
+  .information-widget-glances
+  .custom-ram-widget > div {
+    min-width: 150px;
+  }
+
+  #information-widgets .resource-icon {
+    width: 26px !important;
+    height: 26px !important;
+  }
+
+  .information-widget-glances .information-widget-label {
+    margin-top: 16px !important;
+  }
 }

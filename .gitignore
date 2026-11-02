@@ -18,3 +18,12 @@ config/*.log
 .DS_Store
 Thumbs.db
 .vscode/
+
+# Python generated files
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.venv/
+
+# Runtime monitoring data
+*.pid
