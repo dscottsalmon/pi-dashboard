@@ -1,0 +1,16 @@
+
+[Unit]
+Description=Pi Dashboard Tailscale Monitor
+Wants=tailscaled.service
+After=tailscaled.service
+
+[Service]
+Type=simple
+User=scottishpro
+WorkingDirectory=/home/scottishpro/pi-dashboard
+ExecStart=/usr/bin/python3 /home/scottishpro/pi-dashboard/monitor/tailscale_monitor.py
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

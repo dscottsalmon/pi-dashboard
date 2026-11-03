@@ -2,25 +2,49 @@
 #!/usr/bin/env python3
 
 import json
+from datetime import datetime, timezone
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from pathlib import Path
 
-STATUS_FILE = Path("/data/internet-status.json")
+DATA_DIR = Path("/data")
+
+ENDPOINTS = {
+    "/status": "internet-status.json",
+    "/tailscale": "tailscale-status.json",
+}
 
 
 class StatusHandler(BaseHTTPRequestHandler):
 
     def do_GET(self):
-        if self.path != "/status":
+        filename = ENDPOINTS.get(self.path)
+
+        if filename is None:
             self.send_error(404)
             return
 
         try:
-            data = json.loads(STATUS_FILE.read_text())
+            data = json.loads((DATA_DIR / filename).read_text())
 
         except (OSError, json.JSONDecodeError):
             self.send_error(503, "Status unavailable")
             return
+
+        # Reject stale Tailscale snapshots.
+        if self.path == "/tailscale":
+            try:
+                last_check = datetime.fromisoformat(data["last_check"])
+                age = (
+                    datetime.now(timezone.utc) - last_check
+                ).total_seconds()
+
+                if age < 0 or age > 90:
+                    self.send_error(503, "Tailscale status is stale")
+                    return
+
+            except (KeyError, ValueError, TypeError):
+                self.send_error(503, "Invalid Tailscale status")
+                return
 
         body = json.dumps(data).encode("utf-8")
 
@@ -34,5 +58,5 @@ class StatusHandler(BaseHTTPRequestHandler):
 
 if __name__ == "__main__":
     server = HTTPServer(("0.0.0.0", 8080), StatusHandler)
-    print("Internet status API listening on port 8080", flush=True)
+    print("Dashboard status API listening on port 8080", flush=True)
     server.serve_forever()
