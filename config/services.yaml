@@ -103,7 +103,7 @@
           mappings:
             items: devices
             name: display_name
-            label: status
+            label: connection_label
             format: text
 
 - Personal Services:

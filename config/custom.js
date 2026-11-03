@@ -349,11 +349,11 @@ const osIcons = {
   unknown: "/icons/custom/unknown.svg",
 };
 
+
 function customizeTailscale() {
   const cards = document.querySelectorAll(".service-container");
 
   for (const card of cards) {
-    // Identify the Tailscale widget by its device rows.
     if (!card.querySelector(".font-thin.pl-2")) continue;
 
     const rows = card.querySelectorAll(
@@ -366,14 +366,16 @@ function customizeTailscale() {
 
       if (!name || !status) continue;
 
-      const match = name.textContent.match(/\(([^)]+)\)$/);
+      const match = name.textContent.trim().match(/\(([^)]+)\)$/);
       if (!match) continue;
+
       const os = match[1].toLowerCase();
       const deviceName = name.textContent.trim();
 
+      // Select the appropriate locally hosted SVG.
       const iconUrl = deviceName.includes("Pi Server")
         ? osIcons.raspberrypi
-        : (osIcons[os] ?? oSIcons.unkown);
+        : (osIcons[os] ?? osIcons.unknown);
 
       if (iconUrl && !name.querySelector(".tailscale-os-icon")) {
         const icon = document.createElement("img");
@@ -383,15 +385,55 @@ function customizeTailscale() {
         name.prepend(icon);
       }
 
-      const online = status.textContent.includes("Online");
+      // Homepage supplies "latency | status" as text.
+      const raw = status.textContent.trim();
+      const online = /\bOnline\b/.test(raw);
+      const offline = /\bOffline\b/.test(raw);
 
-      status.textContent = online ? "Online" : "Offline";
+      if (!online && !offline) continue;
+
+      const latency = raw.includes("|")
+        ? raw.split("|")[0].trim()
+        : "—";
+
+      const state = online ? "Online" : "Offline";
+
+      // Build separate elements for latency and status.
+      let latencyElement = status.querySelector(
+        ".tailscale-latency"
+      );
+      let stateElement = status.querySelector(
+        ".tailscale-state"
+      );
+
+      if (!latencyElement || !stateElement) {
+        status.replaceChildren();
+
+        latencyElement = document.createElement("span");
+        latencyElement.className = "tailscale-latency";
+
+        stateElement = document.createElement("span");
+        stateElement.className = "tailscale-state";
+
+        status.append(latencyElement, stateElement);
+      }
+
+      // Only update the text when its value changes.
+      if (latencyElement.textContent !== latency) {
+        latencyElement.textContent = latency;
+      }
+
+      if (stateElement.textContent !== state) {
+        stateElement.textContent = state;
+      }
+
       status.classList.add("tailscale-status");
       status.classList.toggle("is-online", online);
-      status.classList.toggle("is-offline", !online);
+      status.classList.toggle("is-offline", offline);
     }
   }
 }
+
 
   // ==========================================
   // 5. Dashboard Customizations

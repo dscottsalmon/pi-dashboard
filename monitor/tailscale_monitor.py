@@ -5,6 +5,7 @@ import json
 import os
 import subprocess
 import time
+import re
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -22,6 +23,36 @@ def get_status():
     )
     return json.loads(result.stdout)
 
+def measure_latency(ip):
+    """Measure Tailscale peer latency in milliseconds."""
+
+    if not ip:
+        return None
+
+    try:
+        result = subprocess.run(
+            ["tailscale", "ping", "--c", "1", ip],
+            capture_output=True,
+            text=True,
+            timeout=5,
+            check=False,
+        )
+
+        if result.returncode != 0:
+            return None
+
+        match = re.search(
+            r"\bin\s+([\d.]+)ms\b",
+            result.stdout,
+        )
+
+        if match:
+            return float(match.group(1))
+
+    except (subprocess.SubprocessError, OSError):
+        pass
+
+    return None
 
 def summarize_device(device):
     ips = device.get("TailscaleIPs") or []
@@ -40,6 +71,21 @@ def summarize_device(device):
     }
 
     online = bool(device.get("Online", False))
+
+    is_self = device.get("HostName", "").lower() == "pihole-server"
+
+    latency_ms = (
+        measure_latency(ipv4)
+        if online and not is_self
+        else None
+    )
+
+    latency_label = (
+        "Local" if is_self
+        else f"{latency_ms:g} ms" if latency_ms is not None
+        else "—"
+    )
+
     os_raw = device.get("OS", "Unknown")
     os_names = {
 	    "windows": "Windows",
@@ -63,6 +109,11 @@ def summarize_device(device):
         "online": online,
         "status": "Online" if online else "Offline",
         "active": bool(device.get("Active", False)),
+        "latency_ms": latency_ms,
+        "latency_label": latency_label,
+        "connection_label": (
+            f"{latency_label} | {'Online' if online else 'Offline'}"
+        ),
     }
 
 
