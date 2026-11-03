@@ -287,3 +287,69 @@
     margin-top: 16px !important;
   }
 }
+/* ------------------------------------------
+   8. Tailscale Connected Devices
+   ------------------------------------------ */
+
+/* Larger device rows */
+.service-container:has(.font-thin.pl-2)
+.bg-theme-200\/50.rounded-sm {
+  padding: 12px 14px !important;
+  margin: 6px 4px !important;
+  min-height: 48px;
+  border-radius: 8px !important;
+  font-size: 0.875rem !important;
+}
+
+/* Device names */
+.service-container:has(.font-thin.pl-2)
+.font-thin.pl-2 {
+  font-weight: 500 !important;
+}
+
+/* Status labels */
+.service-container:has(.font-thin.pl-2)
+.font-bold.mr-2 {
+  font-weight: 600 !important;
+}
+/* ------------------------------------------
+   9. Tailscale Device Icons and Status
+   ------------------------------------------ */
+
+.tailscale-os-icon {
+  width: 22px;
+  height: 22px;
+  min-width: 22px;
+  object-fit: contain;
+  display: inline-block;
+  vertical-align: middle;
+  margin-right: 12px;
+}
+
+.dark .tailscale-os-icon {
+  filter: invert(1);
+}
+
+.tailscale-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.tailscale-status::before {
+  content: "";
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.tailscale-status.is-online::before {
+  background: #4ade80;
+  box-shadow: 0 0 6px #4ade8055;
+}
+
+.tailscale-status.is-offline::before {
+  background: #f87171;
+  box-shadow: 0 0 6px #f8717155;
+}

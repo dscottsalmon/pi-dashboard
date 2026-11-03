@@ -27,12 +27,41 @@ def summarize_device(device):
     ips = device.get("TailscaleIPs") or []
     ipv4 = next((ip for ip in ips if "." in ip), None)
 
+    hostname = (
+        device.get("DNSName", "").split(".")[0]
+        or device.get("HostName", "Unknown")
+    )
+
+    friendly_names = {
+        "pihole-server": "Pi Server",
+        "desktop-le51g90": "Desktop",
+        "laptop-q2jfsefb": "Laptop",
+        "iphone16pro": "iPhone 16 Pro",
+    }
+
+    online = bool(device.get("Online", False))
+    os_raw = device.get("OS", "Unknown")
+    os_names = {
+	    "windows": "Windows",
+	    "linux": "Linux",
+	    "ios": "iOS",
+	    "macos": "macOS",
+	    "darwin": "macOS",
+	    "android": "Android",
+	    "ipados": "iPadOS",
+	}
+
+    os_name = os_names.get(os_raw.lower(), os_raw)
+
     return {
-        "name": device.get("DNSName", "").split(".")[0]
-                or device.get("HostName", "Unknown"),
-        "os": device.get("OS", "unknown"),
+        "name": hostname,
+        "display_name": (
+    		f"{friendly_names.get(hostname.lower(), hostname)}"
+    		f" ({os_name})"),
+        "os": os_name,
         "ip": ipv4,
-        "online": bool(device.get("Online", False)),
+        "online": online,
+        "status": "Online" if online else "Offline",
         "active": bool(device.get("Active", False)),
     }
 
@@ -48,7 +77,12 @@ def collect():
     for peer in status.get("Peer", {}).values():
         devices.append(summarize_device(peer))
 
-    devices.sort(key=lambda d: (not d["online"], d["name"].lower()))
+    devices.sort(
+    key=lambda d: (
+        d["name"].lower() != "pihole-server",
+        d["display_name"].lower(),
+    		)
+	)
 
     return {
         "backend": status.get("BackendState", "Unknown"),

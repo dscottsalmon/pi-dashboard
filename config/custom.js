@@ -334,6 +334,65 @@
     setStatus(formatUptime(seconds));
   }
 
+// ==========================================
+// 5. Tailscale Connected Devices
+// ==========================================
+
+const osIcons = {
+  windows: "/icons/custom/windows.svg",
+  linux: "/icons/custom/linux.svg",
+  ios: "/icons/custom/apple.svg",
+  ipados: "/icons/custom/apple.svg",
+  macos: "/icons/custom/apple.svg",
+  android: "/icons/custom/android.svg",
+  raspberrypi: "/icons/custom/raspberrypi.svg",
+  unknown: "/icons/custom/unknown.svg",
+};
+
+function customizeTailscale() {
+  const cards = document.querySelectorAll(".service-container");
+
+  for (const card of cards) {
+    // Identify the Tailscale widget by its device rows.
+    if (!card.querySelector(".font-thin.pl-2")) continue;
+
+    const rows = card.querySelectorAll(
+      "div.bg-theme-200\\/50.rounded-sm"
+    );
+
+    for (const row of rows) {
+      const name = row.querySelector(".font-thin.pl-2");
+      const status = row.querySelector(".font-bold.mr-2");
+
+      if (!name || !status) continue;
+
+      const match = name.textContent.match(/\(([^)]+)\)$/);
+      if (!match) continue;
+      const os = match[1].toLowerCase();
+      const deviceName = name.textContent.trim();
+
+      const iconUrl = deviceName.includes("Pi Server")
+        ? osIcons.raspberrypi
+        : (osIcons[os] ?? oSIcons.unkown);
+
+      if (iconUrl && !name.querySelector(".tailscale-os-icon")) {
+        const icon = document.createElement("img");
+        icon.src = iconUrl;
+        icon.alt = os;
+        icon.className = "tailscale-os-icon";
+        name.prepend(icon);
+      }
+
+      const online = status.textContent.includes("Online");
+
+      status.textContent = online ? "Online" : "Offline";
+      status.classList.add("tailscale-status");
+      status.classList.toggle("is-online", online);
+      status.classList.toggle("is-offline", !online);
+    }
+  }
+}
+
   // ==========================================
   // 5. Dashboard Customizations
   // ==========================================
@@ -351,6 +410,8 @@
   }
 
   function customize() {
+    customizeTailscale();
+
     const widgets = getWidgets();
 
     // Six built-in resources are required.

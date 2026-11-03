@@ -92,6 +92,20 @@
             - field: active_peers
               label: Active
 
+    - Connected Devices:
+        icon: mdi-lan-connect
+        description: Automatically discovered Tailscale devices
+        widget:
+          type: customapi
+          url: http://internet-status:8080/tailscale
+          refreshInterval: 30000
+          display: dynamic-list
+          mappings:
+            items: devices
+            name: display_name
+            label: status
+            format: text
+
 - Personal Services:
     - GitHub:
         icon: github.png

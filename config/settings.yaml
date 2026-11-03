@@ -14,7 +14,7 @@ layout:
 
   Tailscale Network:
     style: row
-    columns: 3
+    columns: 2
 
   Personal Services:
     style: row
