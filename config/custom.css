@@ -330,22 +330,36 @@
   filter: invert(1);
 }
 
+/* ------------------------------------------
+   Tailscale Status Alignment
+   ------------------------------------------ */
 
+/* Fixed columns: latency | connection status */
 .tailscale-status {
-  display: inline-flex;
+  display: grid;
+  grid-template-columns: 65px 145px;
   align-items: center;
-  justify-content: flex-end;
-  gap: 16px;
+  column-gap: 16px;
   white-space: nowrap;
 }
 
+/* Latency: right-aligned */
+.tailscale-latency {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  font-weight: 400;
+  opacity: 0.75;
+}
+
+/* Status: left-aligned with consistent dot position */
 .tailscale-state {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  min-width: 75px;
+  white-space: nowrap;
 }
 
+/* Online/offline indicator */
 .tailscale-state::before {
   content: "";
   width: 9px;
@@ -364,27 +378,95 @@
   box-shadow: 0 0 6px #f8717155;
 }
 
-/* Tailscale latency and connection status */
+/* ------------------------------------------
+   Tailscale Device Hover Tooltips
+   ------------------------------------------ */
 
-.tailscale-status {
-  display: inline-flex;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 16px;
+/* Anchor each tooltip to its device row. */
+.service-container:has(.tailscale-status)
+.bg-theme-200\/50.rounded-sm {
+  position: relative;
+}
+
+/* Tailscale tooltip card */
+.tailscale-tooltip {
+  position: fixed;
+  z-index: 9999;
+
+  top: 0;
+  left: 0;
+  right: auto;
+  bottom: auto;
+
+  width: 270px;
+  max-width: calc(100vw - 32px);
+  padding: 14px 16px;
+
+  background: #172235;
+  border: 1px solid #475569;
+  border-radius: 10px;
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.35);
+
+  color: #f1f5f9;
+  font-size: 12px;
+  font-weight: 400;
+
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transform: translateY(-4px);
+
+  transition:
+    opacity 120ms ease,
+    transform 120ms ease,
+    visibility 120ms;
+}
+
+.tailscale-tooltip.is-visible {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0);
+}
+
+/* Device heading */
+.tailscale-tooltip-heading {
+  font-size: 13px;
+  font-weight: 600;
+  padding-bottom: 10px;
+  margin-bottom: 10px;
+  border-bottom: 1px solid #334155;
+}
+
+/* Label/value pairs */
+.tailscale-tooltip-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+  margin-top: 7px;
+}
+
+.tailscale-tooltip-label {
+  color: #94a3b8;
   white-space: nowrap;
 }
 
-.tailscale-latency {
-  min-width: 55px;
+.tailscale-tooltip-value {
+  color: #f1f5f9;
   text-align: right;
-  font-variant-numeric: tabular-nums;
-  font-weight: 400;
-  opacity: 0.75;
+  overflow-wrap: anywhere;
 }
 
-.tailscale-state {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  min-width: 62px;
+/* First two devices: tooltip opens downward */
+.service-container .bg-theme-200\/50.rounded-sm:nth-child(-n+2)
+> .tailscale-tooltip {
+  top: calc(100% + 6px);
+  bottom: auto;
+}
+
+/* Last two devices: tooltip opens upward */
+.service-container .bg-theme-200\/50.rounded-sm:nth-last-child(-n+2)
+> .tailscale-tooltip {
+  top: auto;
+  bottom: calc(100% + 6px);
 }

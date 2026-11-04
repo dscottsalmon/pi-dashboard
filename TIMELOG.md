@@ -7,5 +7,6 @@
 | Nov 1 |  2.0  | Project planning and initial setup             |
 | Nov 2 |  5.0  | Initializing, github setup, header of dashboard|
 | Nov 3 |  3.0  | Created Tailscale status widget                |
+| Nov 4 |  1.5  | Tailscale widget improvements                  |
 
-**Total: 10.0 hours**
+**Total: 11.5 hours**

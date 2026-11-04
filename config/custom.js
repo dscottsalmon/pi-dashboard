@@ -13,6 +13,7 @@
     ],
     ramEndpoint: "/glances-memory",
     internetEndpoint: "/internet-status",
+    tailscaleEndpoint: "/tailscale",
     refreshInterval: 30000,
     uptimeInterval: 1000,
     staleAfter: 90000,
@@ -22,6 +23,7 @@
     ".information-widget-glances .information-widget-resource";
 
   const originalDriveValues = new WeakMap();
+  const tailscaleTooltips = new WeakMap();
 
   let latestMemory = null;
   let internetStatus = null;
@@ -385,26 +387,36 @@ function customizeTailscale() {
         name.prepend(icon);
       }
 
-      // Homepage supplies "latency | status" as text.
+      // Homepage supplies "latency | location" as text.
       const raw = status.textContent.trim();
-      const online = /\bOnline\b/.test(raw);
-      const offline = /\bOffline\b/.test(raw);
+
+      const existingLatency = status.querySelector(
+        ".tailscale-latency"
+      );
+      const existingState = status.querySelector(
+        ".tailscale-state"
+      );
+
+      // Read Homepage's new value, or preserve the
+      // previously processed value on subsequent passes.
+      const parts = raw.includes("|")
+        ? raw.split("|").map(part => part.trim())
+        : [
+            existingLatency?.textContent ?? "—",
+            existingState?.textContent ?? ""
+          ];
+
+      const latency = parts[0] || "—";
+      const state = parts[1] || "";
+
+      const offline = state.startsWith("Last seen");
+      const online = ["Host", "Local", "Remote"].includes(state);
 
       if (!online && !offline) continue;
 
-      const latency = raw.includes("|")
-        ? raw.split("|")[0].trim()
-        : "—";
-
-      const state = online ? "Online" : "Offline";
-
-      // Build separate elements for latency and status.
-      let latencyElement = status.querySelector(
-        ".tailscale-latency"
-      );
-      let stateElement = status.querySelector(
-        ".tailscale-state"
-      );
+      // Build separate elements for latency and location.
+      let latencyElement = existingLatency;
+      let stateElement = existingState;
 
       if (!latencyElement || !stateElement) {
         status.replaceChildren();
@@ -418,14 +430,8 @@ function customizeTailscale() {
         status.append(latencyElement, stateElement);
       }
 
-      // Only update the text when its value changes.
-      if (latencyElement.textContent !== latency) {
-        latencyElement.textContent = latency;
-      }
-
-      if (stateElement.textContent !== state) {
-        stateElement.textContent = state;
-      }
+      setText(latencyElement, latency);
+      setText(stateElement, state);
 
       status.classList.add("tailscale-status");
       status.classList.toggle("is-online", online);
@@ -434,6 +440,169 @@ function customizeTailscale() {
   }
 }
 
+function positionTailscaleTooltip(row, tooltip) {
+  const rect = row.getBoundingClientRect();
+
+  const width = tooltip.offsetWidth;
+  const height = tooltip.offsetHeight;
+  const margin = 12;
+
+  // Center the tooltip over the left half of the row.
+  const targetX = rect.left + rect.width * 0.40;
+
+  const left = Math.max(
+    margin,
+    Math.min(
+      targetX - width / 2,
+      window.innerWidth - width - margin
+    )
+  );
+
+  // Prefer below the row, but flip above if necessary.
+  let top = rect.bottom + 8;
+
+  if (top + height > window.innerHeight - margin) {
+    top = rect.top - height - 8;
+  }
+
+  top = Math.max(
+    margin,
+    Math.min(top, window.innerHeight - height - margin)
+  );
+
+  tooltip.style.left = `${left}px`;
+  tooltip.style.top = `${top}px`;
+}
+
+async function updateTailscaleTooltips() {
+  try {
+    const response = await fetch(CONFIG.tailscaleEndpoint, {
+      cache: "no-store",
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}`);
+    }
+
+    const data = await response.json();
+
+    for (const device of data.devices) {
+      const cards = document.querySelectorAll(".service-container");
+
+      for (const card of cards) {
+        const rows = card.querySelectorAll(
+          "div.bg-theme-200\\/50.rounded-sm"
+        );
+
+        for (const row of rows) {
+          const name = row.querySelector(".font-thin.pl-2");
+          if (!name) continue;
+
+          if (name.textContent.trim() !== device.display_name) {
+            continue;
+          }
+
+          const details = [
+            device.display_name,
+            `Tailscale IP: ${device.ip ?? "Unknown"}`,
+            `Connection: ${device.connection_method ?? "Unknown"}`,
+            `Latency: ${device.latency_label ?? "—"}`,
+            `OS: ${device.os ?? "Unknown"}`,
+          ];
+
+          if (device.endpoint) {
+            details.push(`Endpoint: ${device.endpoint}`);
+          }
+
+          if (
+            device.connection_method === "Relayed" &&
+            device.relay
+          ) {
+            details.push(`DERP region: ${device.relay}`);
+          }
+
+          // Remove the browser's native delayed tooltip.
+          row.removeAttribute("title");
+          
+          // Store tooltip data on the row for CSS.
+          row.dataset.tooltipName = device.display_name;
+          row.dataset.tooltipIp = device.ip ?? "Unknown";
+          row.dataset.tooltipConnection =
+            device.connection_method === "Relayed"
+              ? `DERP relay (${device.relay ?? "unknown"})`
+              : device.connection_method ?? "Unknown";
+          row.dataset.tooltipLatency = device.latency_label ?? "—";
+          row.dataset.tooltipOs = device.os ?? "Unknown";
+          
+          // Build the hover card once per row.
+          let tooltip = tailscaleTooltips.get(row);
+          tailscaleTooltips.set(row, tooltip);
+          
+          if (!tooltip) {
+            tooltip = document.createElement("div");
+            tooltip.className = "tailscale-tooltip";
+            document.body.appendChild(tooltip);
+          }
+
+          if (!row.dataset.tooltipPositioning) {
+            row.addEventListener("mouseenter", () => {
+              positionTailscaleTooltip(row, tooltip);
+              tooltip.classList.add("is-visible");
+            });
+          
+            row.addEventListener("mouseleave", () => {
+              tooltip.classList.remove("is-visible");
+            });
+          
+            row.dataset.tooltipPositioning = "true";
+          }
+          
+          const tooltipRows = [
+            ["Tailscale IP", row.dataset.tooltipIp],
+            ["Connection", row.dataset.tooltipConnection],
+            ["Latency", row.dataset.tooltipLatency],
+            ["Operating system", row.dataset.tooltipOs],
+          ];
+          
+          // Rebuild only when the underlying data changes.
+          const signature = JSON.stringify([
+            device.display_name,
+            tooltipRows,
+          ]);
+          
+          if (tooltip.dataset.signature !== signature) {
+            tooltip.replaceChildren();
+          
+            const heading = document.createElement("div");
+            heading.className = "tailscale-tooltip-heading";
+            heading.textContent = device.display_name;
+            tooltip.appendChild(heading);
+          
+            for (const [label, value] of tooltipRows) {
+              const item = document.createElement("div");
+              item.className = "tailscale-tooltip-row";
+          
+              const labelElement = document.createElement("span");
+              labelElement.className = "tailscale-tooltip-label";
+              labelElement.textContent = label;
+          
+              const valueElement = document.createElement("span");
+              valueElement.className = "tailscale-tooltip-value";
+              valueElement.textContent = value;
+          
+              item.append(labelElement, valueElement);
+              tooltip.appendChild(item);
+            }
+          
+            tooltip.dataset.signature = signature;
+          }
+        }
+      }
+    }
+  } catch (error) {
+    console.warn("Tailscale tooltip update failed:", error);
+  }
+}
 
   // ==========================================
   // 5. Dashboard Customizations
@@ -504,7 +673,14 @@ function customizeTailscale() {
 
     fetchInternetStatus();
     updateRamWidget();
-
+    
+	updateTailscaleTooltips();
+	
+	setInterval(
+	  updateTailscaleTooltips,
+	  CONFIG.refreshInterval
+	);
+	
     setInterval(
       fetchInternetStatus,
       CONFIG.refreshInterval
