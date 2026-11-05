@@ -31,7 +31,7 @@
   let activeTailscaleTooltip = null;
   let tailscaleSessionUpdates = 0;
   let tailscaleLifetimeUpdates = null;
-  let tailscaleNextUpdate = Date.now();
+  let tailscaleNextUpdate = Date.now() + CONFIG.refreshInterval;
   let latestMemory = null;
   let internetStatus = null;
   let lastSuccessfulInternetFetch = 0;
@@ -776,11 +776,6 @@ function applyTailscaleTooltips() {
     updateTailscaleStats,
     1000
   );
-	
-	setInterval(
-	  updateTailscaleTooltips,
-	  CONFIG.refreshInterval
-	);
 	
     setInterval(
       fetchInternetStatus,
