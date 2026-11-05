@@ -23,11 +23,15 @@
     ".information-widget-glances .information-widget-resource";
 
   const originalDriveValues = new WeakMap();
+
   // Enumerable so tooltips belonging to removed Homepage rows can be cleaned up.
   const tailscaleTooltips = new Map();
+
   let latestTailscaleDevices = [];
   let activeTailscaleTooltip = null;
-
+  let tailscaleSessionUpdates = 0;
+  let tailscaleLifetimeUpdates = null;
+  let tailscaleNextUpdate = Date.now();
   let latestMemory = null;
   let internetStatus = null;
   let lastSuccessfulInternetFetch = 0;
@@ -354,6 +358,58 @@ const osIcons = {
   unknown: "/icons/custom/unknown.svg",
 };
 
+function updateTailscaleStats() {
+  const card = [...document.querySelectorAll(".service-container")]
+    .find(card => card.querySelector(".font-thin.pl-2"));
+
+  if (!card) return;
+
+  let footer = card.querySelector("#tailscale-stats");
+
+  if (!footer) {
+    footer = document.createElement("div");
+    footer.id = "tailscale-stats";
+
+    footer.innerHTML = `
+      <div class="tailscale-stat">
+        <span class="tailscale-stat-value" id="tailscale-lifetime">—</span>
+        <span class="tailscale-stat-label">LIFETIME</span>
+      </div>
+      <div class="tailscale-stat">
+        <span class="tailscale-stat-value" id="tailscale-session">0</span>
+        <span class="tailscale-stat-label">SESSION</span>
+      </div>
+      <div class="tailscale-stat">
+        <span class="tailscale-stat-value" id="tailscale-next">30s</span>
+        <span class="tailscale-stat-label">NEXT UPDATE</span>
+      </div>
+    `;
+
+    card.appendChild(footer);
+  }
+
+  const seconds = Math.max(
+    0,
+    Math.ceil((tailscaleNextUpdate - Date.now()) / 1000)
+  );
+
+  setText(
+    footer.querySelector("#tailscale-lifetime"),
+    tailscaleLifetimeUpdates === null
+      ? "—"
+      : tailscaleLifetimeUpdates.toLocaleString()
+  );
+
+  setText(
+    footer.querySelector("#tailscale-session"),
+    tailscaleSessionUpdates.toLocaleString()
+  );
+
+  setText(
+    footer.querySelector("#tailscale-next"),
+    `${seconds}s`
+  );
+}
 
 function customizeTailscale() {
   const cards = document.querySelectorAll(".service-container");
@@ -498,7 +554,16 @@ async function updateTailscaleTooltips() {
       throw new Error("Invalid Tailscale device data");
     }
     latestTailscaleDevices = data.devices;
+
+    tailscaleSessionUpdates++;
+
+    if (Number.isSafeInteger(data.stats?.lifetime_updates)) {
+      tailscaleLifetimeUpdates = data.stats.lifetime_updates;
+    }
+
     applyTailscaleTooltips();
+    updateTailscaleStats();
+
   } catch (error) {
     console.warn("Tailscale tooltip update failed:", error);
   }
@@ -645,6 +710,7 @@ function applyTailscaleTooltips() {
   function customize() {
     customizeTailscale();
     applyTailscaleTooltips();
+    updateTailscaleStats();
 
     const widgets = getWidgets();
 
@@ -700,6 +766,16 @@ function applyTailscaleTooltips() {
     updateRamWidget();
     
 	updateTailscaleTooltips();
+
+  setInterval(() => {
+    tailscaleNextUpdate = Date.now() + CONFIG.refreshInterval;
+    updateTailscaleTooltips();
+  }, CONFIG.refreshInterval);
+
+  setInterval(
+    updateTailscaleStats,
+    1000
+  );
 	
 	setInterval(
 	  updateTailscaleTooltips,

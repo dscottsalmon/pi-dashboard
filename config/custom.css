@@ -451,3 +451,39 @@
   text-align: right;
   overflow-wrap: anywhere;
 }
+
+/* ------------------------------------------
+   10. Tailscale Update Statistics
+   ------------------------------------------ */
+
+#tailscale-stats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  margin: 16px 4px 4px;
+  padding: 14px 8px;
+  border-top: 1px solid #475569;
+}
+
+.tailscale-stat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+  min-width: 0;
+}
+
+.tailscale-stat-value {
+  color: #f1f5f9;
+  font-size: 1.125rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.tailscale-stat-label {
+  color: #94a3b8;
+  font-size: 0.65rem;
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  white-space: nowrap;
+}
