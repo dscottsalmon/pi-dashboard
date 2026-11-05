@@ -6,6 +6,8 @@ import os
 import subprocess
 import time
 import re
+
+from tailscale_stats import record_update
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -243,8 +245,11 @@ def main():
             data = collect()
             save_state(data)
 
+            stats = record_update()
+
             print(
-                f"Tailscale: {data['online']}/{data['total']} online",
+                f"Tailscale: {data['online']}/{data['total']} online "
+                f"| Lifetime updates: {stats['lifetime_updates']}",
                 flush=True,
             )
 
