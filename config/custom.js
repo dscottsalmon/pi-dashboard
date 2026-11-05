@@ -451,8 +451,8 @@ function positionTailscaleTooltip(row, tooltip) {
   const margin = 12;
   const gap = 8;
 
-  // Prefer right, then left, with the tooltip centred on the row.
-  let left = rect.right + gap;
+  // Position tooltip within the device card, vertically centred on the row.
+  let left = rect.left + rect.width * 0.25;
   let top = rect.top + (rect.height - height) / 2;
 
   if (left + width > window.innerWidth - margin) {
