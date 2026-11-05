@@ -23,7 +23,10 @@
     ".information-widget-glances .information-widget-resource";
 
   const originalDriveValues = new WeakMap();
-  const tailscaleTooltips = new WeakMap();
+  // Enumerable so tooltips belonging to removed Homepage rows can be cleaned up.
+  const tailscaleTooltips = new Map();
+  let latestTailscaleDevices = [];
+  let activeTailscaleTooltip = null;
 
   let latestMemory = null;
   let internetStatus = null;
@@ -446,25 +449,26 @@ function positionTailscaleTooltip(row, tooltip) {
   const width = tooltip.offsetWidth;
   const height = tooltip.offsetHeight;
   const margin = 12;
+  const gap = 8;
 
-  // Center the tooltip over the left half of the row.
-  const targetX = rect.left + rect.width * 0.40;
+  // Prefer right, then left, with the tooltip centred on the row.
+  let left = rect.right + gap;
+  let top = rect.top + (rect.height - height) / 2;
 
-  const left = Math.max(
-    margin,
-    Math.min(
-      targetX - width / 2,
-      window.innerWidth - width - margin
-    )
-  );
+  if (left + width > window.innerWidth - margin) {
+    left = rect.left - width - gap;
 
-  // Prefer below the row, but flip above if necessary.
-  let top = rect.bottom + 8;
-
-  if (top + height > window.innerHeight - margin) {
-    top = rect.top - height - 8;
+    // Neither side fits: use the space below or above the row.
+    if (left < margin) {
+      left = rect.left + (rect.width - width) / 2;
+      top = rect.bottom + gap;
+      if (top + height > window.innerHeight - margin) {
+        top = rect.top - height - gap;
+      }
+    }
   }
 
+  left = Math.max(margin, Math.min(left, window.innerWidth - width - margin));
   top = Math.max(
     margin,
     Math.min(top, window.innerHeight - height - margin)
@@ -472,6 +476,11 @@ function positionTailscaleTooltip(row, tooltip) {
 
   tooltip.style.left = `${left}px`;
   tooltip.style.top = `${top}px`;
+}
+
+function hideTailscaleTooltip() {
+  activeTailscaleTooltip?.classList.remove("is-visible");
+  activeTailscaleTooltip = null;
 }
 
 async function updateTailscaleTooltips() {
@@ -485,8 +494,26 @@ async function updateTailscaleTooltips() {
     }
 
     const data = await response.json();
+    if (!Array.isArray(data.devices)) {
+      throw new Error("Invalid Tailscale device data");
+    }
+    latestTailscaleDevices = data.devices;
+    applyTailscaleTooltips();
+  } catch (error) {
+    console.warn("Tailscale tooltip update failed:", error);
+  }
+}
 
-    for (const device of data.devices) {
+function applyTailscaleTooltips() {
+    for (const [row, tooltip] of tailscaleTooltips) {
+      if (!row.isConnected) {
+        if (activeTailscaleTooltip === tooltip) hideTailscaleTooltip();
+        tooltip.remove();
+        tailscaleTooltips.delete(row);
+      }
+    }
+
+    for (const device of latestTailscaleDevices) {
       const cards = document.querySelectorAll(".service-container");
 
       for (const card of cards) {
@@ -502,29 +529,10 @@ async function updateTailscaleTooltips() {
             continue;
           }
 
-          const details = [
-            device.display_name,
-            `Tailscale IP: ${device.ip ?? "Unknown"}`,
-            `Connection: ${device.connection_method ?? "Unknown"}`,
-            `Latency: ${device.latency_label ?? "—"}`,
-            `OS: ${device.os ?? "Unknown"}`,
-          ];
-
-          if (device.endpoint) {
-            details.push(`Endpoint: ${device.endpoint}`);
-          }
-
-          if (
-            device.connection_method === "Relayed" &&
-            device.relay
-          ) {
-            details.push(`DERP region: ${device.relay}`);
-          }
-
           // Remove the browser's native delayed tooltip.
           row.removeAttribute("title");
           
-          // Store tooltip data on the row for CSS.
+          // Store the latest tooltip values on the row.
           row.dataset.tooltipName = device.display_name;
           row.dataset.tooltipIp = device.ip ?? "Unknown";
           row.dataset.tooltipConnection =
@@ -546,12 +554,19 @@ async function updateTailscaleTooltips() {
 
           if (!row.dataset.tooltipPositioning) {
             row.addEventListener("mouseenter", () => {
+              // A detached row may be reinserted with a newly created tooltip.
+              const tooltip = tailscaleTooltips.get(row);
+              if (!tooltip) return;
+              hideTailscaleTooltip();
               positionTailscaleTooltip(row, tooltip);
               tooltip.classList.add("is-visible");
+              activeTailscaleTooltip = tooltip;
             });
           
             row.addEventListener("mouseleave", () => {
-              tooltip.classList.remove("is-visible");
+              if (activeTailscaleTooltip === tailscaleTooltips.get(row)) {
+                hideTailscaleTooltip();
+              }
             });
           
             row.dataset.tooltipPositioning = "true";
@@ -596,12 +611,19 @@ async function updateTailscaleTooltips() {
           
             tooltip.dataset.signature = signature;
           }
+          if (activeTailscaleTooltip === tooltip) {
+            positionTailscaleTooltip(row, tooltip);
+          } else if (row.matches(":hover") && !row.dataset.tooltipReady) {
+            // The initial fetch may finish while the pointer is already on a row.
+            positionTailscaleTooltip(row, tooltip);
+            hideTailscaleTooltip();
+            tooltip.classList.add("is-visible");
+            activeTailscaleTooltip = tooltip;
+          }
+          row.dataset.tooltipReady = "true";
         }
       }
     }
-  } catch (error) {
-    console.warn("Tailscale tooltip update failed:", error);
-  }
 }
 
   // ==========================================
@@ -622,6 +644,7 @@ async function updateTailscaleTooltips() {
 
   function customize() {
     customizeTailscale();
+    applyTailscaleTooltips();
 
     const widgets = getWidgets();
 
@@ -667,6 +690,8 @@ async function updateTailscaleTooltips() {
   // ==========================================
 
   function initialize() {
+    document.addEventListener("scroll", hideTailscaleTooltip, true);
+    window.addEventListener("resize", hideTailscaleTooltip);
     customize();
 
     observer.observe(document.body, observerOptions);

@@ -382,12 +382,6 @@
    Tailscale Device Hover Tooltips
    ------------------------------------------ */
 
-/* Anchor each tooltip to its device row. */
-.service-container:has(.tailscale-status)
-.bg-theme-200\/50.rounded-sm {
-  position: relative;
-}
-
 /* Tailscale tooltip card */
 .tailscale-tooltip {
   position: fixed;
@@ -400,6 +394,7 @@
 
   width: 270px;
   max-width: calc(100vw - 32px);
+  box-sizing: border-box;
   padding: 14px 16px;
 
   background: #172235;
@@ -455,18 +450,4 @@
   color: #f1f5f9;
   text-align: right;
   overflow-wrap: anywhere;
-}
-
-/* First two devices: tooltip opens downward */
-.service-container .bg-theme-200\/50.rounded-sm:nth-child(-n+2)
-> .tailscale-tooltip {
-  top: calc(100% + 6px);
-  bottom: auto;
-}
-
-/* Last two devices: tooltip opens upward */
-.service-container .bg-theme-200\/50.rounded-sm:nth-last-child(-n+2)
-> .tailscale-tooltip {
-  top: auto;
-  bottom: calc(100% + 6px);
 }
