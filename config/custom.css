@@ -487,3 +487,13 @@
   letter-spacing: 0.06em;
   white-space: nowrap;
 }
+
+/* Stack Tailscale devices and statistics vertically */
+.service-container:has(#tailscale-stats) {
+  flex-direction: column !important;
+}
+
+.service-container:has(#tailscale-stats) > #tailscale-stats {
+  width: 100%;
+  box-sizing: border-box;
+}
