@@ -536,12 +536,12 @@ async function updateTailscaleTooltips() {
           
           // Build the hover card once per row.
           let tooltip = tailscaleTooltips.get(row);
-          tailscaleTooltips.set(row, tooltip);
           
           if (!tooltip) {
             tooltip = document.createElement("div");
             tooltip.className = "tailscale-tooltip";
             document.body.appendChild(tooltip);
+            tailscaleTooltips.set(row, tooltip);
           }
 
           if (!row.dataset.tooltipPositioning) {
