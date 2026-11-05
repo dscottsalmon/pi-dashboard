@@ -8,7 +8,11 @@
         rewrite * /api/4/mem
         reverse_proxy glances:61208
     }
-    
+
+    handle /tailscale/dashboard {
+            reverse_proxy internet-status:8080
+        }
+        
     handle /tailscale {
         reverse_proxy internet-status:8080
     }

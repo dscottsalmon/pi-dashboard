@@ -30,9 +30,13 @@ services:
     restart: unless-stopped
     working_dir: /app
     command: ["python", "-u", "status_api.py"]
+    environment:
+          TAILSCALE_STATS_FILE: /stats/tailscale-stats.json
     volumes:
       - ./monitor/status_api.py:/app/status_api.py:ro
+      - ./monitor/tailscale_stats.py:/app/tailscale_stats.py:ro
       - /var/lib/pi-dashboard:/data:ro
+      - /var/lib/pi-dashboard/dashboard-stats:/stats
 
   proxy:
     image: caddy:2-alpine

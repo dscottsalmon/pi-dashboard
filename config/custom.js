@@ -13,7 +13,7 @@
     ],
     ramEndpoint: "/glances-memory",
     internetEndpoint: "/internet-status",
-    tailscaleEndpoint: "/tailscale",
+    tailscaleEndpoint: "/tailscale/dashboard",
     refreshInterval: 30000,
     uptimeInterval: 1000,
     staleAfter: 90000,
@@ -774,7 +774,7 @@ function applyTailscaleTooltips() {
 
   setInterval(
     updateTailscaleStats,
-    1000
+    100
   );
 	
     setInterval(

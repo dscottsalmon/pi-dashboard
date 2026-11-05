@@ -2,15 +2,20 @@
 #!/usr/bin/env python3
 
 import json
+
+from tailscale_stats import record_update
 from datetime import datetime, timezone
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from pathlib import Path
 
 DATA_DIR = Path("/data")
+STATS_DIR = Path("/stats")
+STATS_FILE = STATS_DIR / "tailscale-dashboard.json"
 
 ENDPOINTS = {
     "/status": "internet-status.json",
     "/tailscale": "tailscale-status.json",
+    "/tailscale/dashboard": "tailscale-status.json",
 }
 
 
@@ -31,7 +36,7 @@ class StatusHandler(BaseHTTPRequestHandler):
             return
 
         # Reject stale Tailscale snapshots.
-        if self.path == "/tailscale":
+        if self.path in ("/tailscale", "/tailscale/dashboard"):
             try:
                 last_check = datetime.fromisoformat(data["last_check"])
                 age = (
@@ -46,6 +51,13 @@ class StatusHandler(BaseHTTPRequestHandler):
                 self.send_error(503, "Invalid Tailscale status")
                 return
 
+        if self.path == "/tailscale/dashboard":
+            try:
+                data["stats"] = record_update()
+            except (OSError, ValueError, TypeError, KeyError):
+                self.send_error(503, "Dashboard statistics unavailable")
+                return
+            
         body = json.dumps(data).encode("utf-8")
 
         self.send_response(200)
