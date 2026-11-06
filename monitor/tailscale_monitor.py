@@ -14,7 +14,93 @@ from pathlib import Path
 CHECK_INTERVAL = 30
 STATE_FILE = Path("/var/lib/pi-dashboard/tailscale-status.json")
 
+HISTORY_WINDOW = 600  # 10 minutes, in seconds
+HISTORY_FILE = Path("/var/lib/pi-dashboard/tailscale-history.json")
 
+def load_history():
+    """Load saved Tailscale history from disk."""
+
+    try:
+        with HISTORY_FILE.open("r") as file:
+            return json.load(file)
+
+    except FileNotFoundError:
+        return {}
+
+    except (OSError, ValueError) as error:
+        print(f"Failed to load Tailscale history: {error}", flush=True)
+        return {}
+
+
+def save_history(history):
+    """Atomically save Tailscale history to disk."""
+
+    HISTORY_FILE.parent.mkdir(parents=True, exist_ok=True)
+
+    temporary = HISTORY_FILE.with_suffix(".tmp")
+    temporary.write_text(json.dumps(history, indent=2))
+
+    os.replace(temporary, HISTORY_FILE)
+
+def update_device_history(history, device, now):
+    """Update rolling latency and observed online duration."""
+
+    device_id = device["ip"] or device["name"]
+    record = history.setdefault(device_id, {
+        "samples": [],
+        "online_since": None,
+    })
+
+    online = device["online"]
+    latency = device["latency_ms"]
+
+    # Track the beginning of the observed online session.
+    if online:
+        if record.get("online_since") is None:
+            record["online_since"] = now.isoformat()
+    else:
+        record["online_since"] = None
+
+    # Record the latest measurement, including failed probes.
+    record["samples"].append({
+        "timestamp": now.isoformat(),
+        "latency_ms": latency if online else None,
+    })
+
+    # Keep only samples from the last 10 minutes.
+    cutoff = now.timestamp() - HISTORY_WINDOW
+
+    record["samples"] = [
+        sample
+        for sample in record["samples"]
+        if datetime.fromisoformat(sample["timestamp"]).timestamp() >= cutoff
+    ]
+
+    # Calculate statistics from successful measurements only.
+    latencies = [
+        sample["latency_ms"]
+        for sample in record["samples"]
+        if isinstance(sample["latency_ms"], (int, float))
+    ]
+
+    device["latency_history"] = record["samples"]
+    device["latency_avg_10m"] = (
+        round(sum(latencies) / len(latencies), 1)
+        if latencies else None
+    )
+    device["latency_min_10m"] = min(latencies) if latencies else None
+    device["latency_max_10m"] = max(latencies) if latencies else None
+
+    online_since = record["online_since"]
+
+    device["online_since"] = online_since
+    device["online_seconds"] = (
+        max(0, int(
+            (now - datetime.fromisoformat(online_since)).total_seconds()
+        ))
+        if online_since else None
+    )
+    
 def get_status():
     result = subprocess.run(
         ["tailscale", "status", "--json"],
