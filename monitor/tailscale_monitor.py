@@ -56,10 +56,12 @@ def update_device_history(history, device, now):
 
     # Track the beginning of the observed online session.
     if online:
-        if record.get("online_since") is None:
-            record["online_since"] = now.isoformat()
-    else:
-        record["online_since"] = None
+            if record.get("online_since") is None:
+                record["online_since"] = now.isoformat()
+                record["samples"] = []
+        else:
+            record["online_since"] = None
+            record["samples"] = []
 
     # Record the latest measurement, including failed probes.
     record["samples"].append({
