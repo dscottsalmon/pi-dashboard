@@ -100,7 +100,7 @@ def update_device_history(history, device, now):
         ))
         if online_since else None
     )
-    
+
 def get_status():
     result = subprocess.run(
         ["tailscale", "status", "--json"],
@@ -286,7 +286,7 @@ def summarize_device(device):
     }
 
 
-def collect():
+def collect(history):
     status = get_status()
 
     devices = []
@@ -303,6 +303,11 @@ def collect():
         d["display_name"].lower(),
     		)
 	)
+
+    now = datetime.now(timezone.utc)
+
+    for device in devices:
+        update_device_history(history, device, now)
 
     return {
         "backend": status.get("BackendState", "Unknown"),
@@ -326,15 +331,18 @@ def save_state(data):
 def main():
     print("Tailscale monitor started", flush=True)
 
+    history = load_history()
+
     while True:
         try:
-            data = collect()
+            data = collect(history)
 
             data["next_check"] = (
                 datetime.now(timezone.utc) + timedelta(seconds=CHECK_INTERVAL)
             ).isoformat()
 
             save_state(data)
+            save_history(history)
 
             print(
                 f"Tailscale: {data['online']}/{data['total']} online",
