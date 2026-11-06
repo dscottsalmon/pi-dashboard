@@ -132,12 +132,15 @@ def measure_latency(ip):
             return None
 
         match = re.search(
-            r"\bin\s+([\d.]+)ms\b",
+            r"\bin\s+([\d.]+)(ms|s)\b",
             result.stdout,
         )
 
         if match:
-            return float(match.group(1))
+            latency = float(match.group(1))
+            unit = match.group(2)
+
+            return latency * 1000 if unit == "s" else latency
 
     except (subprocess.SubprocessError, OSError):
         pass
