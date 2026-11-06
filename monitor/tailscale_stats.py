@@ -13,24 +13,29 @@ STATS_FILE = Path(
 )
 
 
-def record_update():
-    """Record a successful dashboard Tailscale refresh."""
+def load_stats():
+    """Read lifetime statistics without incrementing."""
+
+    if not STATS_FILE.exists():
+        return {"lifetime_updates": 0, "last_snapshot": None}
+
+    return json.loads(STATS_FILE.read_text())
+
+
+def record_update(snapshot_id):
+    """Count a monitoring snapshot once across all dashboards."""
+
+    stats = load_stats()
+
+    if stats.get("last_snapshot") == snapshot_id:
+        return stats
+
+    stats["lifetime_updates"] += 1
+    stats["last_snapshot"] = snapshot_id
+    stats["last_updated"] = datetime.now(timezone.utc).isoformat()
 
     STATS_FILE.parent.mkdir(parents=True, exist_ok=True)
 
-    # Load existing statistics, if available.
-    if STATS_FILE.exists():
-        stats = json.loads(STATS_FILE.read_text())
-    else:
-        stats = {
-            "lifetime_updates": 0,
-        }
-
-    # Increment the lifetime counter.
-    stats["lifetime_updates"] += 1
-    stats["last_updated"] = datetime.now(timezone.utc).isoformat()
-
-    # Write safely using a temporary file.
     temporary = STATS_FILE.with_suffix(".tmp")
     temporary.write_text(json.dumps(stats, indent=2))
     os.replace(temporary, STATS_FILE)

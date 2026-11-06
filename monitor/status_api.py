@@ -3,7 +3,7 @@
 
 import json
 
-from tailscale_stats import record_update
+from tailscale_stats import load_stats, record_update
 from datetime import datetime, timezone
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from pathlib import Path
@@ -20,6 +20,44 @@ ENDPOINTS = {
 
 
 class StatusHandler(BaseHTTPRequestHandler):
+    def do_POST(self):
+        if self.path != "/tailscale/dashboard":
+            self.send_error(404)
+            return
+
+        try:
+            length = int(self.headers.get("Content-Length", "0"))
+
+            if length <= 0 or length > 1024:
+                self.send_error(400, "Invalid request size")
+                return
+
+            payload = json.loads(self.rfile.read(length))
+            snapshot_id = payload["last_check"]
+
+            # Only count a snapshot that matches the latest monitor output.
+            current = json.loads(
+                (DATA_DIR / "tailscale-status.json").read_text()
+            )
+
+            if snapshot_id != current["last_check"]:
+                self.send_error(409, "Snapshot no longer current")
+                return
+
+            stats = record_update(snapshot_id)
+
+        except (OSError, ValueError, TypeError, KeyError):
+            self.send_error(400, "Invalid snapshot")
+            return
+
+        body = json.dumps(stats).encode("utf-8")
+
+        self.send_response(200)
+        self.send_header("Content-Type", "application/json")
+        self.send_header("Cache-Control", "no-store")
+        self.send_header("Content-Length", str(len(body)))
+        self.end_headers()
+        self.wfile.write(body)
 
     def do_GET(self):
         filename = ENDPOINTS.get(self.path)
@@ -53,11 +91,15 @@ class StatusHandler(BaseHTTPRequestHandler):
 
         if self.path == "/tailscale/dashboard":
             try:
-                data["stats"] = record_update()
-            except (OSError, ValueError, TypeError, KeyError):
+                data["stats"] = load_stats()
+            except (OSError, ValueError, TypeError):
                 self.send_error(503, "Dashboard statistics unavailable")
                 return
-            
+
+        # Include the server's current time for client clock synchronization.
+        if self.path in ("/tailscale", "/tailscale/dashboard"):
+            data["server_time"] = datetime.now(timezone.utc).isoformat()
+
         body = json.dumps(data).encode("utf-8")
 
         self.send_response(200)

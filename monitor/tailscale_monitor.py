@@ -8,7 +8,7 @@ import time
 import re
 
 
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 CHECK_INTERVAL = 30
@@ -243,6 +243,11 @@ def main():
     while True:
         try:
             data = collect()
+
+            data["next_check"] = (
+                datetime.now(timezone.utc) + timedelta(seconds=CHECK_INTERVAL)
+            ).isoformat()
+
             save_state(data)
 
             print(
@@ -252,8 +257,6 @@ def main():
 
         except (subprocess.SubprocessError, OSError, ValueError) as error:
             print(f"Tailscale collection failed: {error}", flush=True)
-            # Keep the last successful snapshot; the API will
-            # later use last_check to identify stale data.
 
         time.sleep(CHECK_INTERVAL)
 

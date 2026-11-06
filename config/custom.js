@@ -29,9 +29,14 @@
 
   let latestTailscaleDevices = [];
   let activeTailscaleTooltip = null;
+  let tailscaleLastSnapshot = null;
+  let tailscaleLastRecordedSnapshot = null;
   let tailscaleSessionUpdates = 0;
   let tailscaleLifetimeUpdates = null;
-  let tailscaleNextUpdate = Date.now() + CONFIG.refreshInterval;
+  let tailscaleNextUpdate = null;
+  let tailscaleClockOffset = 0;
+  let tailscaleRequestInFlight = false;
+
   let latestMemory = null;
   let internetStatus = null;
   let lastSuccessfulInternetFetch = 0;
@@ -341,8 +346,7 @@
     );
 
     setStatus(formatUptime(seconds));
-  }
-
+}
 // ==========================================
 // 5. Tailscale Connected Devices
 // ==========================================
@@ -388,10 +392,11 @@ function updateTailscaleStats() {
     card.appendChild(footer);
   }
 
-  const seconds = Math.max(
-    0,
-    Math.ceil((tailscaleNextUpdate - Date.now()) / 1000)
-  );
+  const seconds = tailscaleNextUpdate === null
+    ? null
+    : Math.ceil(
+        (tailscaleNextUpdate - (Date.now() + tailscaleClockOffset)) / 1000
+      );
 
   setText(
     footer.querySelector("#tailscale-lifetime"),
@@ -407,7 +412,13 @@ function updateTailscaleStats() {
 
   setText(
     footer.querySelector("#tailscale-next"),
-    `${seconds}s`
+    seconds === null
+      ? "—"
+      : seconds < 0
+        ? "Delayed"
+        : seconds === 0
+          ? "Checking…"
+          : `${seconds}s`
   );
 }
 
@@ -540,9 +551,16 @@ function hideTailscaleTooltip() {
 }
 
 async function updateTailscaleTooltips() {
+  if (tailscaleRequestInFlight) return;
+
+  tailscaleRequestInFlight = true;
+
   try {
+    const requestStarted = Date.now();
+
     const response = await fetch(CONFIG.tailscaleEndpoint, {
       cache: "no-store",
+      signal: AbortSignal.timeout(5000),
     });
 
     if (!response.ok) {
@@ -550,22 +568,137 @@ async function updateTailscaleTooltips() {
     }
 
     const data = await response.json();
+
+    const requestFinished = Date.now();
+    const serverTime = Date.parse(data.server_time);
+
+    if (Number.isFinite(serverTime)) {
+      const browserMidpoint = (requestStarted + requestFinished) / 2;
+      tailscaleClockOffset = serverTime - browserMidpoint;
+    }
+
     if (!Array.isArray(data.devices)) {
       throw new Error("Invalid Tailscale device data");
     }
     latestTailscaleDevices = data.devices;
 
-    tailscaleSessionUpdates++;
+	const nextCheck = Date.parse(data.next_check);
 
-    if (Number.isSafeInteger(data.stats?.lifetime_updates)) {
-      tailscaleLifetimeUpdates = data.stats.lifetime_updates;
+	if (Number.isFinite(nextCheck)) {
+	  tailscaleNextUpdate = nextCheck;
+	}
+
+   if (tailscaleLastSnapshot === null) {
+      // The first snapshot establishes the session baseline.
+      tailscaleLastSnapshot = data.last_check;
+      tailscaleLastRecordedSnapshot = data.last_check;
+    } else {
+      if (data.last_check !== tailscaleLastSnapshot) {
+        tailscaleLastSnapshot = data.last_check;
+        tailscaleSessionUpdates++;
+      }
+
+      if (data.last_check !== tailscaleLastRecordedSnapshot) {
+        try {
+          const statsResponse = await fetch(CONFIG.tailscaleEndpoint, {
+            method: "POST",
+            signal: AbortSignal.timeout(5000),
+            headers: {
+              "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+              last_check: data.last_check
+            })
+          });
+
+          if (!statsResponse.ok) {
+            throw new Error(`HTTP ${statsResponse.status}`);
+          }
+
+          const stats = await statsResponse.json();
+
+          // Mark the snapshot recorded only after a successful POST.
+          tailscaleLastRecordedSnapshot = data.last_check;
+
+          if (Number.isSafeInteger(stats.lifetime_updates)) {
+            tailscaleLifetimeUpdates = stats.lifetime_updates;
+          }
+        } catch (error) {
+          console.warn("Failed to record Tailscale update:", error);
+        }
+      }
     }
 
+    if (Number.isSafeInteger(data.stats?.lifetime_updates)) {
+      tailscaleLifetimeUpdates = Math.max(
+        data.stats.lifetime_updates,
+        tailscaleLifetimeUpdates ?? 0
+      );
+    }
+
+    applyTailscaleDeviceStatuses();
     applyTailscaleTooltips();
     updateTailscaleStats();
 
   } catch (error) {
     console.warn("Tailscale tooltip update failed:", error);
+  } finally {
+    tailscaleRequestInFlight = false;
+  }
+}
+
+function applyTailscaleDeviceStatuses() {
+  const devices = new Map(
+    latestTailscaleDevices.map(device => [
+      device.display_name,
+      device
+    ])
+  );
+
+  const rows = document.querySelectorAll(
+    ".service-container div.bg-theme-200\\/50.rounded-sm"
+  );
+
+  for (const row of rows) {
+    const name = row.querySelector(".font-thin.pl-2");
+    const status = row.querySelector(".font-bold.mr-2");
+
+    if (!name || !status) continue;
+
+    const device = devices.get(name.textContent.trim());
+    if (!device) continue;
+
+    const label = device.connection_label ?? "Unknown";
+    const [latency, ...stateParts] = label.split("|");
+    const state = stateParts.join("|").trim();
+
+    let latencyElement = status.querySelector(".tailscale-latency");
+    let stateElement = status.querySelector(".tailscale-state");
+
+    if (!latencyElement || !stateElement) {
+      status.replaceChildren();
+
+      latencyElement = document.createElement("span");
+      latencyElement.className = "tailscale-latency";
+
+      stateElement = document.createElement("span");
+      stateElement.className = "tailscale-state";
+
+      status.append(latencyElement, stateElement);
+    }
+
+    setText(latencyElement, latency.trim());
+    setText(stateElement, state);
+
+    status.classList.add("tailscale-status");
+    status.classList.toggle(
+      "is-online",
+      ["Host", "Local", "Remote"].includes(state)
+    );
+    status.classList.toggle(
+      "is-offline",
+      state.startsWith("Last seen")
+    );
   }
 }
 
@@ -596,7 +729,7 @@ function applyTailscaleTooltips() {
 
           // Remove the browser's native delayed tooltip.
           row.removeAttribute("title");
-          
+
           // Store the latest tooltip values on the row.
           row.dataset.tooltipName = device.display_name;
           row.dataset.tooltipIp = device.ip ?? "Unknown";
@@ -606,10 +739,10 @@ function applyTailscaleTooltips() {
               : device.connection_method ?? "Unknown";
           row.dataset.tooltipLatency = device.latency_label ?? "—";
           row.dataset.tooltipOs = device.os ?? "Unknown";
-          
+
           // Build the hover card once per row.
           let tooltip = tailscaleTooltips.get(row);
-          
+
           if (!tooltip) {
             tooltip = document.createElement("div");
             tooltip.className = "tailscale-tooltip";
@@ -627,53 +760,53 @@ function applyTailscaleTooltips() {
               tooltip.classList.add("is-visible");
               activeTailscaleTooltip = tooltip;
             });
-          
+
             row.addEventListener("mouseleave", () => {
               if (activeTailscaleTooltip === tailscaleTooltips.get(row)) {
                 hideTailscaleTooltip();
               }
             });
-          
+
             row.dataset.tooltipPositioning = "true";
           }
-          
+
           const tooltipRows = [
             ["Tailscale IP", row.dataset.tooltipIp],
             ["Connection", row.dataset.tooltipConnection],
             ["Latency", row.dataset.tooltipLatency],
             ["Operating system", row.dataset.tooltipOs],
           ];
-          
+
           // Rebuild only when the underlying data changes.
           const signature = JSON.stringify([
             device.display_name,
             tooltipRows,
           ]);
-          
+
           if (tooltip.dataset.signature !== signature) {
             tooltip.replaceChildren();
-          
+
             const heading = document.createElement("div");
             heading.className = "tailscale-tooltip-heading";
             heading.textContent = device.display_name;
             tooltip.appendChild(heading);
-          
+
             for (const [label, value] of tooltipRows) {
               const item = document.createElement("div");
               item.className = "tailscale-tooltip-row";
-          
+
               const labelElement = document.createElement("span");
               labelElement.className = "tailscale-tooltip-label";
               labelElement.textContent = label;
-          
+
               const valueElement = document.createElement("span");
               valueElement.className = "tailscale-tooltip-value";
               valueElement.textContent = value;
-          
+
               item.append(labelElement, valueElement);
               tooltip.appendChild(item);
             }
-          
+
             tooltip.dataset.signature = signature;
           }
           if (activeTailscaleTooltip === tooltip) {
@@ -764,19 +897,19 @@ function applyTailscaleTooltips() {
 
     fetchInternetStatus();
     updateRamWidget();
-    
+
 	updateTailscaleTooltips();
 
-  setInterval(() => {
-    tailscaleNextUpdate = Date.now() + CONFIG.refreshInterval;
-    updateTailscaleTooltips();
-  }, CONFIG.refreshInterval);
+  setInterval(
+    updateTailscaleTooltips,
+    2000
+  );
 
   setInterval(
     updateTailscaleStats,
     100
   );
-	
+
     setInterval(
       fetchInternetStatus,
       CONFIG.refreshInterval
