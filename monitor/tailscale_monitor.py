@@ -56,7 +56,7 @@ def update_device_history(history, device, now):
 
     # Track the beginning of the observed online session.
     if online:
-            if record.get("online_since") is None:
+        if record.get("online_since") is None:
                 record["online_since"] = now.isoformat()
                 record["samples"] = []
         else:

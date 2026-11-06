@@ -770,10 +770,37 @@ function applyTailscaleTooltips() {
             row.dataset.tooltipPositioning = "true";
           }
 
+          const formatLatency = value =>
+            Number.isFinite(value) ? `${value} ms` : "—";
+
+          const formatOnlineDuration = seconds => {
+            if (!Number.isFinite(seconds)) return "—";
+
+            const days = Math.floor(seconds / 86400);
+            const hours = Math.floor((seconds % 86400) / 3600);
+            const minutes = Math.floor((seconds % 3600) / 60);
+
+            if (days > 0) return `${days}d ${hours}h ${minutes}m`;
+            if (hours > 0) return `${hours}h ${minutes}m`;
+            if (minutes > 0) return `${minutes}m`;
+
+            return `${Math.floor(seconds)}s`;
+          };
+
+          const latencyRange =
+            Number.isFinite(device.latency_min_10m) &&
+            Number.isFinite(device.latency_max_10m)
+              ? `${device.latency_min_10m}–${device.latency_max_10m} ms`
+              : "—";
+
           const tooltipRows = [
+            ["Connection type", row.dataset.tooltipConnection],
+            ["Connection", device.location ?? "Unknown"],
             ["Tailscale IP", row.dataset.tooltipIp],
-            ["Connection", row.dataset.tooltipConnection],
-            ["Latency", row.dataset.tooltipLatency],
+            ["Current latency", row.dataset.tooltipLatency],
+            ["10-minute average", formatLatency(device.latency_avg_10m)],
+            ["10-minute range", latencyRange],
+            ["Online for", formatOnlineDuration(device.online_seconds)],
             ["Operating system", row.dataset.tooltipOs],
           ];
 
