@@ -961,11 +961,15 @@ function applyTailscaleTooltips() {
             ["Tailscale IP", row.dataset.tooltipIp],
           ];
           
+          if (device.lan_ip) {
+            tooltipRows.splice(2, 0, ["LAN IP", device.lan_ip]);
+          }
+          
           if (hasLatencyMonitoring) {
             tooltipRows.push(
               ["Current latency", row.dataset.tooltipLatency],
-              ["Average latency", formatLatency(device.latency_avg_10m)],
-              ["Latency range", latencyRange]
+              ["Average latency (10 mins)", formatLatency(device.latency_avg_10m)],
+              ["Latency range (10 mins)", latencyRange]
             );
           }
           

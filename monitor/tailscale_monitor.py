@@ -239,6 +239,19 @@ def summarize_device(device):
             pass
 
     location = get_location(device, is_self)
+    
+    # Only expose LAN addresses for locally connected devices.
+    lan_ip = None
+    
+    if location == "Local":
+        if is_self:
+            lan_ip = "192.168.0.2"
+        else:
+            endpoint = device.get("CurAddr") or ""
+    
+            if endpoint.startswith("192.168.0."):
+                lan_ip = endpoint.rsplit(":", 1)[0]
+    
     last_seen = device.get("LastSeen")
 
     if not online:
@@ -277,6 +290,7 @@ def summarize_device(device):
         "latency_ms": latency_ms,
         "latency_label": latency_label,
         "location": location,
+        "lan_ip": lan_ip,
         "last_seen": last_seen,
         "connection_label": connection_label,
         "connection_method": (
