@@ -9,5 +9,6 @@
 | Nov 3 |  3.0  | Created Tailscale status widget                |
 | Nov 4 |  1.5  | Tailscale widget improvements                  |
 | Nov 4 |  3.0  | Built statistics tracker for Tailscale widget  |
+| Nov 5 |  3.5  | Fixed Tailscale widget bugs + added more stats |
 
-**Total: 14.5 hours**
+**Total: 18 hours**
