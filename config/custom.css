@@ -497,3 +497,37 @@
   width: 100%;
   box-sizing: border-box;
 }
+
+/* Tailscale latency graph */
+
+.tailscale-graph-section {
+  margin-top: 16px;
+  padding-top: 12px;
+  border-top: 1px solid #334155;
+}
+
+.tailscale-graph-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.tailscale-graph-heading span:first-child {
+  color: #f1f5f9;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.tailscale-graph-heading span:last-child {
+  color: #94a3b8;
+  font-size: 11px;
+}
+
+.tailscale-latency-graph {
+  display: block;
+  width: 100%;
+  height: auto;
+  overflow: visible;
+}

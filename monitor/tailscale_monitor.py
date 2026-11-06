@@ -59,7 +59,7 @@ def update_device_history(history, device, now):
         if record.get("online_since") is None:
                 record["online_since"] = now.isoformat()
                 record["samples"] = []
-        else:
+    else:
             record["online_since"] = None
             record["samples"] = []
 
@@ -148,7 +148,7 @@ def get_location(device, is_self=False):
     """Classify a Tailscale peer using its current endpoint."""
 
     if is_self:
-        return "Host"
+        return "Local"
 
     if not device.get("Online", False):
         return "Offline"

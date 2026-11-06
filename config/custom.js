@@ -702,6 +702,166 @@ function applyTailscaleDeviceStatuses() {
   }
 }
 
+function createLatencyGraph(history) {
+  const ns = "http://www.w3.org/2000/svg";
+  const width = 340;
+  const height = 120;
+  const left = 36;
+  const right = 8;
+  const top = 10;
+  const bottom = 25;
+
+  const svg = document.createElementNS(ns, "svg");
+  svg.setAttribute("viewBox", `0 0 ${width} ${height}`);
+  svg.setAttribute("class", "tailscale-latency-graph");
+  svg.setAttribute("role", "img");
+  svg.setAttribute("aria-label", "Latency over the last 10 minutes");
+
+  const samples = Array.isArray(history) ? history : [];
+  const valid = samples.filter(sample =>
+    Number.isFinite(sample.latency_ms) &&
+    Number.isFinite(Date.parse(sample.timestamp))
+  );
+
+  if (!valid.length) {
+    const message = document.createElementNS(ns, "text");
+    message.setAttribute("x", width / 2);
+    message.setAttribute("y", height / 2);
+    message.setAttribute("text-anchor", "middle");
+    message.setAttribute("fill", "#94a3b8");
+    message.setAttribute("font-size", "12");
+    message.textContent = "No latency data available";
+    svg.appendChild(message);
+    return svg;
+  }
+
+  const now = Date.now();
+  const start = now - 600000;
+  const plotWidth = width - left - right;
+  const plotHeight = height - top - bottom;
+
+  const latencies = valid.map(sample => sample.latency_ms);
+  
+  const minLatency = Math.min(...latencies);
+  const maxLatency = Math.max(...latencies);
+  const spread = maxLatency - minLatency;
+  
+  // Add padding around the observed measurements.
+  const padding = Math.max(1, spread * 0.15);
+  
+  const rawMin = Math.max(0, minLatency - padding);
+  const rawMax = maxLatency + padding;
+  const range = rawMax - rawMin;
+  
+  // Choose a readable interval.
+  const magnitude = 10 ** Math.floor(Math.log10(range));
+  const normalized = range / magnitude;
+  
+  const step = (
+    normalized <= 2 ? 0.2 :
+    normalized <= 5 ? 0.5 : 1
+  ) * magnitude;
+  
+  const yMin = Math.max(0, Math.floor(rawMin / step) * step);
+  const yMax = Math.ceil(rawMax / step) * step;
+
+  const x = timestamp =>
+    left + Math.max(0, Math.min(1,
+      (Date.parse(timestamp) - start) / 600000
+    )) * plotWidth;
+
+  const y = latency =>
+    top + plotHeight -
+    ((latency - yMin) / (yMax - yMin)) * plotHeight;
+
+  // Gridlines and vertical-axis labels.
+  for (let i = 0; i <= 4; i++) {
+    const value = yMin + (yMax - yMin) * i / 4;
+    const py = y(value);
+
+    const line = document.createElementNS(ns, "line");
+    line.setAttribute("x1", left);
+    line.setAttribute("x2", width - right);
+    line.setAttribute("y1", py);
+    line.setAttribute("y2", py);
+    line.setAttribute("stroke", "#334155");
+    line.setAttribute("stroke-dasharray", "3 4");
+    svg.appendChild(line);
+
+    if (i % 2 === 0) {
+      const label = document.createElementNS(ns, "text");
+      label.setAttribute("x", left - 6);
+      label.setAttribute("y", py + 3);
+      label.setAttribute("text-anchor", "end");
+      label.setAttribute("fill", "#94a3b8");
+      label.setAttribute("font-size", "10");
+      label.textContent = Number(value.toFixed(1));
+      svg.appendChild(label);
+    }
+  }
+
+  // Draw line segments, breaking at failed measurements.
+  let segment = [];
+
+  function drawSegment() {
+    if (!segment.length) return;
+
+    const path = document.createElementNS(ns, "path");
+    const d = segment.map((sample, i) =>
+      `${i === 0 ? "M" : "L"} ${x(sample.timestamp)} ${y(sample.latency_ms)}`
+    ).join(" ");
+
+    path.setAttribute("d", d);
+    path.setAttribute("fill", "none");
+    path.setAttribute("stroke", "#4ade80");
+    path.setAttribute("stroke-width", "2");
+    path.setAttribute("stroke-linejoin", "round");
+    path.setAttribute("stroke-linecap", "round");
+    svg.appendChild(path);
+
+    // Show isolated samples as dots.
+    if (segment.length === 1) {
+      const dot = document.createElementNS(ns, "circle");
+      dot.setAttribute("cx", x(segment[0].timestamp));
+      dot.setAttribute("cy", y(segment[0].latency_ms));
+      dot.setAttribute("r", "2.5");
+      dot.setAttribute("fill", "#4ade80");
+      svg.appendChild(dot);
+    }
+
+    segment = [];
+  }
+
+  for (const sample of samples) {
+    if (
+      Number.isFinite(sample.latency_ms) &&
+      Number.isFinite(Date.parse(sample.timestamp))
+    ) {
+      segment.push(sample);
+    } else {
+      drawSegment();
+    }
+  }
+
+  drawSegment();
+
+  for (const [label, px, anchor] of [
+    ["10m ago", left, "start"],
+    ["Now", width - right, "end"]
+  ]) {
+    const text = document.createElementNS(ns, "text");
+    text.setAttribute("x", px);
+    text.setAttribute("y", height - 5);
+    text.setAttribute("text-anchor", anchor);
+    text.setAttribute("fill", "#94a3b8");
+    text.setAttribute("font-size", "10");
+    text.textContent = label;
+    svg.appendChild(text);
+  }
+
+  return svg;
+}
+
 function applyTailscaleTooltips() {
     for (const [row, tooltip] of tailscaleTooltips) {
       if (!row.isConnected) {
@@ -792,22 +952,33 @@ function applyTailscaleTooltips() {
             Number.isFinite(device.latency_max_10m)
               ? `${device.latency_min_10m}–${device.latency_max_10m} ms`
               : "—";
-
+          const hasLatencyMonitoring =
+            device.connection_method !== "Host";
+            
           const tooltipRows = [
-            ["Connection type", row.dataset.tooltipConnection],
-            ["Connection", device.location ?? "Unknown"],
+            ["Connection method", row.dataset.tooltipConnection],
+            ["Network location", device.location ?? "Unknown"],
             ["Tailscale IP", row.dataset.tooltipIp],
-            ["Current latency", row.dataset.tooltipLatency],
-            ["10-minute average", formatLatency(device.latency_avg_10m)],
-            ["10-minute range", latencyRange],
-            ["Online for", formatOnlineDuration(device.online_seconds)],
-            ["Operating system", row.dataset.tooltipOs],
           ];
+          
+          if (hasLatencyMonitoring) {
+            tooltipRows.push(
+              ["Current latency", row.dataset.tooltipLatency],
+              ["Average latency", formatLatency(device.latency_avg_10m)],
+              ["Latency range", latencyRange]
+            );
+          }
+          
+          tooltipRows.push(
+            ["Online for", formatOnlineDuration(device.online_seconds)],
+            ["Operating system", row.dataset.tooltipOs]
+          );
 
           // Rebuild only when the underlying data changes.
           const signature = JSON.stringify([
             device.display_name,
             tooltipRows,
+            device.latency_history,
           ]);
 
           if (tooltip.dataset.signature !== signature) {
@@ -833,7 +1004,30 @@ function applyTailscaleTooltips() {
               item.append(labelElement, valueElement);
               tooltip.appendChild(item);
             }
-
+            
+			const graphSection = document.createElement("div");
+			graphSection.className = "tailscale-graph-section";
+			
+			const graphHeading = document.createElement("div");
+			graphHeading.className = "tailscale-graph-heading";
+			
+			const graphTitle = document.createElement("span");
+			graphTitle.textContent = "Latency history (ms)";
+			
+			const graphPeriod = document.createElement("span");
+			graphPeriod.textContent = "Last 10 minutes";
+			
+			graphHeading.append(graphTitle, graphPeriod);
+			graphSection.appendChild(graphHeading);
+			
+			graphSection.appendChild(
+			  createLatencyGraph(device.latency_history)
+			);
+			
+			if (hasLatencyMonitoring) {
+			  tooltip.appendChild(graphSection);
+			}
+			
             tooltip.dataset.signature = signature;
           }
           if (activeTailscaleTooltip === tooltip) {
