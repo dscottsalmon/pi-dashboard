@@ -76,25 +76,9 @@
         href: http://pihole-server.local:3000
 
 - Tailscale Network:
-    - Tailscale:
-        icon: tailscale.png
-        href: https://login.tailscale.com/admin/machines
-        description: VPN and connected devices
-        widget:
-          type: customapi
-          url: http://internet-status:8080/tailscale
-          refreshInterval: 30000
-          mappings:
-            - field: online
-              label: Online
-            - field: total
-              label: Total
-            - field: active_peers
-              label: Active
-
     - Connected Devices:
-        icon: mdi-lan-connect
-        description: Automatically discovered Tailscale devices
+        icon: tailscale.png
+        description: VPN and connected devices
         widget:
           type: customapi
           url: http://internet-status:8080/tailscale
