@@ -38,7 +38,7 @@
   let tailscaleSessionUpdates = 0;
   let tailscaleLifetimeUpdates = null;
   let tailscaleNextUpdate = null;
-  let tailscaleClockOffset = 0;
+  let serverClockOffset = 0;
   let tailscaleRequestInFlight = false;
 
   let networkRequestInFlight = false;
@@ -51,6 +51,10 @@
 
   const formatGB = bytes => (bytes / 1e9).toFixed(1);
   const formatGiB = bytes => (bytes / (1024 ** 3)).toFixed(2);
+
+  function getServerTime() {
+    return Date.now() + serverClockOffset;
+  }
 
   function setText(element, text) {
     if (element && element.textContent !== text) {
@@ -402,7 +406,7 @@ function updateTailscaleStats() {
   const seconds = tailscaleNextUpdate === null
     ? null
     : Math.ceil(
-        (tailscaleNextUpdate - (Date.now() + tailscaleClockOffset)) / 1000
+        (tailscaleNextUpdate - getServerTime()) / 1000
       );
 
   setText(
@@ -581,7 +585,7 @@ async function updateTailscaleTooltips() {
 
     if (Number.isFinite(serverTime)) {
       const browserMidpoint = (requestStarted + requestFinished) / 2;
-      tailscaleClockOffset = serverTime - browserMidpoint;
+      serverClockOffset = serverTime - browserMidpoint;
     }
 
     if (!Array.isArray(data.devices)) {
@@ -890,7 +894,7 @@ function createNetworkTrafficGraph(history) {
   );
 
   // Use the existing Tailscale clock offset to align with Pi timestamps.
-  const now = (Date.now() + tailscaleClockOffset) / 1000;
+  const now = getServerTime() / 1000;
   const start = now - 120;
 
   const samples = (Array.isArray(history) ? history : [])
