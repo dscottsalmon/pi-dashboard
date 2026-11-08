@@ -37,6 +37,7 @@ services:
       - ./monitor/tailscale_stats.py:/app/tailscale_stats.py:ro
       - /var/lib/pi-dashboard:/data:ro
       - /var/lib/pi-dashboard/dashboard-stats:/stats
+      - /var/lib/pi-dashboard/speedtest-requests:/speedtest-requests
 
   proxy:
     image: caddy:2-alpine

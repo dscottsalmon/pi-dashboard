@@ -531,3 +531,202 @@
   height: auto;
   overflow: visible;
 }
+
+/* Network Traffic graph */
+
+.network-traffic-graph {
+  display: block;
+  width: 100%;
+  height: 125px;
+  overflow: visible;
+}
+.network-graph-container {
+  margin: 6px 8px 4px;
+  padding: 6px 12px;
+  border-top: 1px solid #334155;
+}
+
+.network-graph-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 4px;
+}
+
+.network-graph-heading span:first-child {
+  color: #f1f5f9;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.network-graph-heading span:last-child {
+  color: #94a3b8;
+  font-size: 11px;
+}
+
+.network-graph-legend {
+  display: flex;
+  justify-content: center;
+  gap: 20px;
+  margin-top: 2px;
+  color: #94a3b8;
+  font-size: 11px;
+}
+
+.network-graph-legend .rx {
+  color: #4ade80;
+}
+
+.network-graph-legend .tx {
+  color: #60a5fa;
+}
+
+
+/* Unified Network Traffic dashboard */
+
+.network-dashboard {
+    margin-top: 10px;
+}
+
+.network-dashboard-columns {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 16px;
+    padding: 0 10px;
+}
+
+.network-ethernet,
+.network-internet {
+    min-width: 0;
+}
+
+.network-internet {
+    border-left: 1px solid #475569;
+    padding-left: 16px;
+}
+
+.network-section-title {
+    color: #f1f5f9;
+    font-size: 13px;
+    font-weight: 600;
+    margin-bottom: 10px;
+}
+
+.network-ethernet .service-container {
+    margin-bottom: 10px;
+}
+
+.network-ethernet .network-graph-container {
+    margin: 0;
+    padding: 8px 0;
+    border-top: none;
+}
+
+.network-ethernet .network-traffic-graph {
+    width: 100%;
+    height: 115px;
+}
+
+.network-speed-results {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+}
+
+.network-speed-result {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 12px;
+    border: 1px solid #475569;
+    border-radius: 8px;
+    color: #cbd5e1;
+    font-size: 12px;
+}
+
+.network-speed-result strong {
+    color: #f1f5f9;
+    font-size: 20px;
+}
+
+.network-speed-status {
+    margin-top: 14px;
+    padding: 12px;
+    border: 1px solid #475569;
+    border-radius: 8px;
+    color: #94a3b8;
+    font-size: 12px;
+}
+
+.network-speed-button {
+    margin-top: 10px;
+    padding: 9px 14px;
+    border-radius: 8px;
+    background: #4f46e5;
+    color: white;
+    font-size: 12px;
+}
+
+.network-speed-button:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+}
+
+.network-speed-progress {
+    margin-top: 12px;
+    padding: 12px 8px;
+    border: 1px solid #334155;
+    border-radius: 8px;
+    color: #64748b;
+    font-size: 11px;
+    text-align: center;
+}
+
+.network-dashboard-footer {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 8px;
+    margin: 14px 10px 10px;
+    padding-top: 12px;
+    border-top: 1px solid #475569;
+}
+
+.network-footer-stat {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 5px;
+    padding: 10px 4px;
+    border: 1px solid #334155;
+    border-radius: 8px;
+}
+
+.network-footer-stat strong {
+    color: #f1f5f9;
+    font-size: 15px;
+    font-weight: 600;
+}
+
+.network-footer-stat span {
+    color: #94a3b8;
+    font-size: 10px;
+    text-align: center;
+}
+
+@media (max-width: 900px) {
+    .network-dashboard-columns {
+        grid-template-columns: 1fr;
+    }
+
+    .network-internet {
+        border-left: none;
+        border-top: 1px solid #475569;
+        padding-left: 0;
+        padding-top: 14px;
+    }
+
+    .network-dashboard-footer {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}

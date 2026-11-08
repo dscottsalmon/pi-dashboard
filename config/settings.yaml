@@ -12,7 +12,7 @@ layout:
     style: row
     columns: 3
 
-  Tailscale Network:
+  Networking:
     style: row
     columns: 2
 

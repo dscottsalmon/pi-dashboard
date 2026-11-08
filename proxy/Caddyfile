@@ -17,7 +17,30 @@
         reverse_proxy internet-status:8080
     }
     
+    handle /network {
+        reverse_proxy internet-status:8080
+    }
+    
+	@speedtestAllowed {
+	        path /speedtest/run
+	        method POST
+	        remote_ip 192.168.0.0/24 100.64.0.0/10
+	    }
+	
+	    handle @speedtestAllowed {
+	        reverse_proxy internet-status:8080
+	    }
+	
+	    handle /speedtest/run {
+	        respond "Forbidden" 403
+	    }
+	    
+    handle /speedtest {
+        reverse_proxy internet-status:8080
+    }
+    
     handle {
         reverse_proxy homepage:3000
     }
+    
 }

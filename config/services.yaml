@@ -75,10 +75,10 @@
         description: Container management
         href: http://pihole-server.local:3000
 
-- Tailscale Network:
+- Networking:
     - Connected Devices:
         icon: tailscale.png
-        description: VPN and connected devices
+        description: Mesh VPN & Connected Devices
         widget:
           type: customapi
           url: http://internet-status:8080/tailscale
@@ -89,6 +89,19 @@
             name: display_name
             label: connection_label
             format: text
+            
+    - Network Traffic:
+        icon: mdi-chart-areaspline
+        description: Ethernet traffic & internet speed
+        widget:
+          type: customapi
+          url: http://internet-status:8080/network
+          refreshInterval: 5000
+          mappings:
+            - field: rx_bytes_per_sec
+              label: RX (B/s)
+            - field: tx_bytes_per_sec
+              label: TX (B/s)
 
 - Personal Services:
     - GitHub:
