@@ -535,11 +535,12 @@
 /* Network Traffic graph */
 
 .network-traffic-graph {
-  display: block;
-  width: 100%;
-  height: 125px;
-  overflow: visible;
+    display: block;
+    width: 100%;
+    height: auto;
+    overflow: visible;
 }
+
 .network-graph-container {
   margin: 6px 8px 4px;
   padding: 6px 12px;
@@ -625,7 +626,7 @@
 
 .network-ethernet .network-traffic-graph {
     width: 100%;
-    height: 115px;
+    height: auto;
 }
 
 .network-speed-results {

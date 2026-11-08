@@ -872,11 +872,12 @@ function createLatencyGraph(history) {
 
 function createNetworkTrafficGraph(history) {
   const ns = "http://www.w3.org/2000/svg";
+  
   const width = 700;
-  const height = 125;
+  const height = 240;
   const left = 65;
   const right = 12;
-  const top = 12;
+  const top = 15;
   const bottom = 25;
 
   const svg = document.createElementNS(ns, "svg");
@@ -885,11 +886,12 @@ function createNetworkTrafficGraph(history) {
   svg.setAttribute("role", "img");
   svg.setAttribute(
     "aria-label",
-    "Received and transmitted Ethernet traffic over the last 10 minutes"
+    "Received and transmitted Ethernet traffic over the last 120 seconds"
   );
 
-  const now = Date.now() / 1000;
-  const start = now - 600;
+  // Use the existing Tailscale clock offset to align with Pi timestamps.
+  const now = (Date.now() + tailscaleClockOffset) / 1000;
+  const start = now - 120;
 
   const samples = (Array.isArray(history) ? history : [])
     .filter(sample =>
@@ -940,7 +942,7 @@ function createNetworkTrafficGraph(history) {
 
   const x = timestamp =>
     left + Math.max(0, Math.min(1,
-      (timestamp - start) / 600
+      (timestamp - start) / 120
     )) * plotWidth;
 
   const y = rate =>
@@ -1007,7 +1009,7 @@ function createNetworkTrafficGraph(history) {
   drawSeries("tx_bytes_per_sec", "#60a5fa");
 
   for (const [label, px, anchor] of [
-    ["10m ago", left, "start"],
+    ["120 seconds ago", left, "start"],
     ["Now", width - right, "end"]
   ]) {
     const text = document.createElementNS(ns, "text");
@@ -1379,7 +1381,24 @@ function applyTailscaleTooltips() {
       if (serviceContainer && serviceContainer.parentElement !== ethernet) {
           ethernet.appendChild(serviceContainer);
       }
-  
+
+      // Synchronize digital readings with the graph snapshot.
+      if (serviceContainer) {
+          const values = serviceContainer.querySelectorAll(
+              ".service-block-value"
+          );
+      
+          if (values.length === 2) {
+              values[0].textContent = formatNetworkRate(
+                  data.rx_bytes_per_sec
+              );
+      
+              values[1].textContent = formatNetworkRate(
+                  data.tx_bytes_per_sec
+              );
+          }
+      }
+      
       let ethernetHeading = ethernet.querySelector(".network-section-title");
   
       if (!ethernetHeading) {
@@ -1404,7 +1423,7 @@ function applyTailscaleTooltips() {
       title.textContent = "ETHERNET THROUGHPUT";
   
       const interval = document.createElement("span");
-      interval.textContent = "Last 10 minutes";
+      interval.textContent = "Last 120 seconds";
   
       heading.append(title, interval);
   
@@ -1761,7 +1780,7 @@ function applyTailscaleTooltips() {
 
   setInterval(
     updateNetworkTraffic,
-    5000
+    2000
   );
 
   setInterval(

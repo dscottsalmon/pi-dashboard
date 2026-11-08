@@ -9,7 +9,7 @@ import shutil
 from datetime import datetime, timezone
 from pathlib import Path
 
-CHECK_INTERVAL = 5
+CHECK_INTERVAL = 1
 INTERFACE = "eth0"
 
 STATS_PATH = Path(f"/sys/class/net/{INTERFACE}/statistics")
