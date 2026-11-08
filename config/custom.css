@@ -625,8 +625,9 @@
 }
 
 .network-ethernet .network-traffic-graph {
+    display: block;
     width: 100%;
-    height: auto;
+    height: 240px;
 }
 
 .network-speed-results {
@@ -676,12 +677,135 @@
 
 .network-speed-progress {
     margin-top: 12px;
-    padding: 12px 8px;
+    padding: 14px 12px;
     border: 1px solid #334155;
     border-radius: 8px;
-    color: #64748b;
+    color: #94a3b8;
     font-size: 11px;
-    text-align: center;
+}
+
+/* Four-stage speed test indicator */
+
+.speedtest-stages {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 6px;
+    margin-bottom: 16px;
+}
+
+.speedtest-stage {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    color: #64748b;
+    transition: color 0.2s ease;
+}
+
+.speedtest-stage-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    border: 2px solid #475569;
+    border-radius: 50%;
+    font-size: 13px;
+    font-weight: 700;
+}
+
+/* Completed stages */
+
+.speedtest-stage.is-complete {
+    color: #4ade80;
+}
+
+.speedtest-stage.is-complete .speedtest-stage-icon {
+    border-color: #4ade80;
+    background: #4ade8022;
+}
+
+.speedtest-stage.is-complete .speedtest-stage-icon::after {
+    content: "✓";
+}
+
+/* Currently active stage */
+
+.speedtest-stage.is-active {
+    color: #60a5fa;
+}
+
+.speedtest-stage.is-active .speedtest-stage-icon {
+    border-color: #60a5fa;
+    background: #60a5fa22;
+    animation: speedtest-pulse 1.5s ease-in-out infinite;
+}
+
+.speedtest-stage.is-active .speedtest-stage-icon::after {
+    content: "●";
+    font-size: 9px;
+}
+
+/* Live speed display */
+
+.speedtest-live {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 10px;
+}
+
+.speedtest-live-value {
+    color: #e2e8f0;
+    font-size: 13px;
+    font-variant-numeric: tabular-nums;
+}
+
+/* Progress bar */
+
+.speedtest-progress-track {
+    height: 6px;
+    background: #1e293b;
+    border-radius: 999px;
+    overflow: hidden;
+}
+
+.speedtest-progress-fill {
+    width: 0%;
+    height: 100%;
+    background: #60a5fa;
+    border-radius: inherit;
+    transition: width 0.45s linear;
+}
+
+.speedtest-progress-percent {
+    margin-top: 6px;
+    text-align: right;
+    color: #94a3b8;
+    font-variant-numeric: tabular-nums;
+}
+
+/* Active-stage animation */
+
+@keyframes speedtest-pulse {
+    0%, 100% {
+        box-shadow: 0 0 0 0 #60a5fa55;
+    }
+
+    50% {
+        box-shadow: 0 0 0 5px #60a5fa00;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .speedtest-stage.is-active .speedtest-stage-icon {
+        animation: none;
+    }
+
+    .speedtest-progress-fill {
+        transition: none;
+    }
 }
 
 .network-dashboard-footer {

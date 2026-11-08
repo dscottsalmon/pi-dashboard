@@ -17,7 +17,7 @@
     networkEndpoint: "/network",
     speedtestEndpoint: "/speedtest",
     speedtestRunEndpoint: "/speedtest/run",
-    
+
     refreshInterval: 30000,
     uptimeInterval: 1000,
     staleAfter: 90000,
@@ -752,27 +752,27 @@ function createLatencyGraph(history) {
   const plotHeight = height - top - bottom;
 
   const latencies = valid.map(sample => sample.latency_ms);
-  
+
   const minLatency = Math.min(...latencies);
   const maxLatency = Math.max(...latencies);
   const spread = maxLatency - minLatency;
-  
+
   // Add padding around the observed measurements.
   const padding = Math.max(1, spread * 0.15);
-  
+
   const rawMin = Math.max(0, minLatency - padding);
   const rawMax = maxLatency + padding;
   const range = rawMax - rawMin;
-  
+
   // Choose a readable interval.
   const magnitude = 10 ** Math.floor(Math.log10(range));
   const normalized = range / magnitude;
-  
+
   const step = (
     normalized <= 2 ? 0.2 :
     normalized <= 5 ? 0.5 : 1
   ) * magnitude;
-  
+
   const yMin = Math.max(0, Math.floor(rawMin / step) * step);
   const yMax = Math.ceil(rawMax / step) * step;
 
@@ -874,10 +874,10 @@ function createLatencyGraph(history) {
 }
 
 
-function createNetworkTrafficGraph(history) {
+function createNetworkTrafficGraph(history, containerWidth) {
   const ns = "http://www.w3.org/2000/svg";
-  
-  const width = 700;
+
+  const width = containerWidth > 0 ? containerWidth : 700;
   const height = 240;
   const left = 65;
   const right = 12;
@@ -1121,17 +1121,17 @@ function applyTailscaleTooltips() {
               : "—";
           const hasLatencyMonitoring =
             device.connection_method !== "Host";
-            
+
           const tooltipRows = [
             ["Connection method", row.dataset.tooltipConnection],
             ["Network location", device.location ?? "Unknown"],
             ["Tailscale IP", row.dataset.tooltipIp],
           ];
-          
+
           if (device.lan_ip) {
             tooltipRows.splice(2, 0, ["LAN IP", device.lan_ip]);
           }
-          
+
           if (hasLatencyMonitoring) {
             tooltipRows.push(
               ["Current latency", row.dataset.tooltipLatency],
@@ -1139,7 +1139,7 @@ function applyTailscaleTooltips() {
               ["Latency range (10 mins)", latencyRange]
             );
           }
-          
+
           tooltipRows.push(
             ["Online for", formatOnlineDuration(device.online_seconds)],
             ["Operating system", row.dataset.tooltipOs]
@@ -1175,30 +1175,30 @@ function applyTailscaleTooltips() {
               item.append(labelElement, valueElement);
               tooltip.appendChild(item);
             }
-            
+
 			const graphSection = document.createElement("div");
 			graphSection.className = "tailscale-graph-section";
-			
+
 			const graphHeading = document.createElement("div");
 			graphHeading.className = "tailscale-graph-heading";
-			
+
 			const graphTitle = document.createElement("span");
 			graphTitle.textContent = "Latency history (ms)";
-			
+
 			const graphPeriod = document.createElement("span");
 			graphPeriod.textContent = "Last 10 minutes";
-			
+
 			graphHeading.append(graphTitle, graphPeriod);
 			graphSection.appendChild(graphHeading);
-			
+
 			graphSection.appendChild(
 			  createLatencyGraph(device.latency_history)
 			);
-			
+
 			if (hasLatencyMonitoring) {
 			  tooltip.appendChild(graphSection);
 			}
-			
+
             tooltip.dataset.signature = signature;
           }
           if (activeTailscaleTooltip === tooltip) {
@@ -1232,156 +1232,156 @@ function applyTailscaleTooltips() {
     link.style.cursor = "default";
   }
 
-  
+
   function getNetworkTrafficCard() {
     const titles = document.querySelectorAll(".service-name");
-  
+
     for (const title of titles) {
       const name = title.firstChild?.textContent.trim();
-  
+
       if (name === "Network Traffic") {
         return title.closest(".service-card");
       }
     }
-  
+
     return null;
   }
-  
+
   function formatNetworkRate(bytesPerSecond) {
     const rate = Number(bytesPerSecond);
-  
+
     if (!Number.isFinite(rate) || rate < 0) {
       return "—";
     }
-  
+
     if (rate >= 1_000_000) {
       return `${(rate / 1_000_000).toFixed(2)} MB/s`;
     }
-  
+
     if (rate >= 1_000) {
       return `${(rate / 1_000).toFixed(1)} KB/s`;
     }
-  
+
     return `${rate.toFixed(0)} B/s`;
   }
-  
+
   function customizeNetworkTraffic() {
     const card = getNetworkTrafficCard();
     if (!card) return;
-  
+
     const blocks = card.querySelectorAll(".service-block");
-  
+
     for (const block of blocks) {
       const label = block.querySelector(".service-block-label");
       const value = block.querySelector(".service-block-value");
-  
+
       if (!label || !value) continue;
-  
+
       const metric = label.textContent.trim();
-  
+
       const isRx = metric === "RX (B/s)" || metric === "RECEIVE";
       const isTx = metric === "TX (B/s)" || metric === "TRANSMIT";
-      
+
       if (!isRx && !isTx) continue;
-  
+
       // Homepage refreshes the raw value every five seconds.
       // Only convert values that have not already been formatted.
       const raw = value.textContent.trim();
-  
+
       if (!/^\d+(\.\d+)?$/.test(raw)) continue;
-  
+
       value.textContent = formatNetworkRate(raw);
-  
+
       label.textContent = isRx ? "RECEIVE" : "TRANSMIT";
     }
   }
 
   function formatNetworkTotal(bytes) {
     const value = Number(bytes);
-  
+
     if (!Number.isFinite(value) || value < 0) {
       return "—";
     }
-  
+
     if (value >= 1_000_000_000) {
       return `${(value / 1_000_000_000).toFixed(2)} GB`;
     }
-  
+
     return `${(value / 1_000_000).toFixed(2)} MB`;
   }
 
   function formatLinkSpeed(mbps) {
       const speed = Number(mbps);
-  
+
       if (!Number.isFinite(speed) || speed <= 0 || mbps == null) {
           return "—";
       }
-  
+
       if (speed >= 1000) {
           return `${Number((speed / 1000).toFixed(2))} Gbps`;
       }
-  
+
       return `${speed} Mbps`;
   }
-  
+
   function formatNetworkUptime(seconds) {
       const uptime = Number(seconds);
-  
+
       if (!Number.isFinite(uptime) || uptime < 0 || seconds == null) {
           return "—";
       }
-  
+
       const totalMinutes = Math.floor(uptime / 60);
       const days = Math.floor(totalMinutes / 1440);
       const hours = Math.floor((totalMinutes % 1440) / 60);
       const minutes = totalMinutes % 60;
-  
+
       if (days > 0) {
           return `${days}d ${hours}h ${minutes}m`;
       }
-  
+
       if (hours > 0) {
           return `${hours}h ${minutes}m`;
       }
-  
+
       return `${minutes}m`;
   }
-  
+
   function renderNetworkTraffic(data) {
       const card = getNetworkTrafficCard();
       if (!card) return;
-  
+
       let layout = card.querySelector(".network-dashboard");
-  
+
       if (!layout) {
           layout = document.createElement("div");
           layout.className = "network-dashboard";
-  
+
           const columns = document.createElement("div");
           columns.className = "network-dashboard-columns";
-  
+
           const ethernet = document.createElement("section");
           ethernet.className = "network-ethernet";
-  
+
           const internet = document.createElement("section");
           internet.className = "network-internet";
-  
+
           columns.append(ethernet, internet);
-  
+
           const footer = document.createElement("div");
           footer.className = "network-dashboard-footer";
-  
+
           layout.append(columns, footer);
           card.appendChild(layout);
       }
-  
+
       const ethernet = layout.querySelector(".network-ethernet");
       const internet = layout.querySelector(".network-internet");
       const footer = layout.querySelector(".network-dashboard-footer");
-  
+
       // Move Homepage's existing live readings into Ethernet.
       const serviceContainer = card.querySelector(".service-container");
-  
+
       if (serviceContainer && serviceContainer.parentElement !== ethernet) {
           ethernet.appendChild(serviceContainer);
       }
@@ -1391,89 +1391,96 @@ function applyTailscaleTooltips() {
           const values = serviceContainer.querySelectorAll(
               ".service-block-value"
           );
-      
+
           if (values.length === 2) {
               values[0].textContent = formatNetworkRate(
                   data.rx_bytes_per_sec
               );
-      
+
               values[1].textContent = formatNetworkRate(
                   data.tx_bytes_per_sec
               );
           }
       }
-      
+
       let ethernetHeading = ethernet.querySelector(".network-section-title");
-  
+
       if (!ethernetHeading) {
           ethernetHeading = document.createElement("div");
           ethernetHeading.className = "network-section-title";
           ethernetHeading.textContent = "Ethernet — eth0";
           ethernet.prepend(ethernetHeading);
       }
-  
+
       let graphContainer = ethernet.querySelector(".network-graph-container");
-  
+
       if (!graphContainer) {
           graphContainer = document.createElement("div");
           graphContainer.className = "network-graph-container";
           ethernet.appendChild(graphContainer);
       }
-  
+
       const heading = document.createElement("div");
       heading.className = "network-graph-heading";
-  
+
       const title = document.createElement("span");
       title.textContent = "ETHERNET THROUGHPUT";
-  
+
       const interval = document.createElement("span");
       interval.textContent = "Last 120 seconds";
-  
+
       heading.append(title, interval);
-  
-      const graph = createNetworkTrafficGraph(data.history);
-  
+
+      const containerWidth = Math.floor(
+          graphContainer.getBoundingClientRect().width
+      );
+
+      const graph = createNetworkTrafficGraph(
+          data.history,
+          containerWidth
+      );
+
       const legend = document.createElement("div");
       legend.className = "network-graph-legend";
-  
+
       const rx = document.createElement("span");
       rx.className = "rx";
       rx.textContent = "● Receive";
-  
+
       const tx = document.createElement("span");
       tx.className = "tx";
       tx.textContent = "● Transmit";
-  
+
       legend.append(rx, tx);
       graphContainer.replaceChildren(heading, graph, legend);
-  
+
       // Internet speed test: layout only, no fabricated results.
       if (!internet.hasChildNodes()) {
           const internetHeading = document.createElement("div");
           internetHeading.className = "network-section-title";
           internetHeading.textContent = "Internet Speed Test";
-  
+
           const speeds = document.createElement("div");
           speeds.className = "network-speed-results";
-  
+
           for (const label of ["Download", "Upload"]) {
               const result = document.createElement("div");
               result.className = "network-speed-result";
-  
+
               const name = document.createElement("span");
               name.textContent = label;
-  
+
               const value = document.createElement("strong");
               value.textContent = "— Mbps";
-  
+
               result.append(name, value);
               speeds.appendChild(result);
           }
-  
+
           const status = document.createElement("div");
           status.className = "network-speed-status";
           status.textContent = "No speed tests recorded";
-  
+
           const button = document.createElement("button");
           button.className = "network-speed-button";
           button.textContent = "Run Speed Test";
@@ -1482,50 +1489,81 @@ function applyTailscaleTooltips() {
 
           button.addEventListener("click", async () => {
               if (button.disabled) return;
-          
+
               button.disabled = true;
               button.textContent = "Requesting…";
               button.dataset.requested = "true";
-          
+
               try {
                   const response = await fetch(CONFIG.speedtestRunEndpoint, {
                       method: "POST",
                       cache: "no-store",
                       signal: AbortSignal.timeout(10000),
                   });
-          
+
                   if (!response.ok) {
                       throw new Error(`HTTP ${response.status}`);
                   }
-          
+
                   button.textContent = "Starting…";
                   setTimeout(() => {
                       delete button.dataset.requested;
                       updateSpeedtest();
                   }, 5000);
-          
+
                   // Refresh the displayed state immediately.
                   await updateSpeedtest();
-          
+
               } catch (error) {
                   console.error("Speed test request failed:", error);
-          
+
                   const status = internet.querySelector(".network-speed-status");
-          
+
                   if (status) {
                       status.textContent = `Unable to start speed test: ${error.message}`;
                   }
-          
+
                   delete button.dataset.requested;
                   button.textContent = "Run Speed Test";
                   button.disabled = false;
               }
           });
-          
+
           const progress = document.createElement("div");
           progress.className = "network-speed-progress";
-          progress.textContent = "Connect  ·  Download  ·  Upload  ·  Complete";
-  
+
+          progress.innerHTML = `
+            <div class="speedtest-stages">
+              <div class="speedtest-stage" data-stage="connecting">
+                <span class="speedtest-stage-icon"></span>
+                <span>Connect</span>
+              </div>
+              <div class="speedtest-stage" data-stage="download">
+                <span class="speedtest-stage-icon"></span>
+                <span>Download</span>
+              </div>
+              <div class="speedtest-stage" data-stage="upload">
+                <span class="speedtest-stage-icon"></span>
+                <span>Upload</span>
+              </div>
+              <div class="speedtest-stage" data-stage="complete">
+                <span class="speedtest-stage-icon"></span>
+                <span>Complete</span>
+              </div>
+            </div>
+
+            <div class="speedtest-live">
+              <span class="speedtest-live-label">Waiting for test</span>
+              <strong class="speedtest-live-value">—</strong>
+            </div>
+
+            <div class="speedtest-progress-track">
+              <div class="speedtest-progress-fill"></div>
+            </div>
+
+            <div class="speedtest-progress-percent">0%</div>
+          `;
+
           internet.append(
               internetHeading,
               speeds,
@@ -1534,72 +1572,71 @@ function applyTailscaleTooltips() {
               progress
           );
       }
-  
+
       // Shared statistics footer.
       footer.replaceChildren();
-  
+
       const statistics = [
           ["TOTAL RECEIVED", formatNetworkTotal(data.lifetime_rx_bytes)],
           ["TOTAL TRANSMITTED", formatNetworkTotal(data.lifetime_tx_bytes)],
           ["LINK SPEED", formatLinkSpeed(data.link_speed_mbps)],
           ["UPTIME", formatNetworkUptime(data.uptime_seconds)]
       ];
-  
+
       for (const [label, value] of statistics) {
           const stat = document.createElement("div");
           stat.className = "network-footer-stat";
-  
+
           const statValue = document.createElement("strong");
           statValue.textContent = value;
-  
+
           const statLabel = document.createElement("span");
           statLabel.textContent = label;
-  
+
           stat.append(statValue, statLabel);
           footer.appendChild(stat);
       }
   }
-  
-  
+
+
   async function updateNetworkTraffic() {
     if (networkRequestInFlight) return;
-  
+
     networkRequestInFlight = true;
-  
+
     try {
       const response = await fetch(CONFIG.networkEndpoint, {
         cache: "no-store",
         signal: AbortSignal.timeout(5000),
       });
-  
+
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}`);
       }
-  
+
       const data = await response.json();
-  
+
       if (!Array.isArray(data.history)) {
         throw new Error("Invalid network history");
       }
-  
+
       // Reject older snapshots arriving out of order.
       const timestamp = Date.parse(data.last_check);
-  
+
       if (!Number.isFinite(timestamp)) {
         throw new Error("Invalid network timestamp");
       }
-  
+
       if (
         latestNetworkSnapshot !== null &&
         timestamp < latestNetworkSnapshot
       ) {
         return;
       }
-  
+
       latestNetworkSnapshot = timestamp;
       renderNetworkTraffic(data);
-      updateSpeedtest();
-  
+
     } catch (error) {
       console.warn("Network traffic update failed:", error);
     } finally {
@@ -1607,91 +1644,160 @@ function applyTailscaleTooltips() {
     }
   }
 
-  
     let speedtestRequestInFlight = false;
-  
+    let speedtestIsRunning = false;
+
     async function updateSpeedtest() {
       if (speedtestRequestInFlight) return;
-  
+
       const card = getNetworkTrafficCard();
       const internet = card?.querySelector(".network-internet");
-  
+
       if (!internet) return;
-  
+
       speedtestRequestInFlight = true;
-  
+
       try {
         const response = await fetch(CONFIG.speedtestEndpoint, {
           cache: "no-store",
           signal: AbortSignal.timeout(5000),
         });
-  
+
         if (!response.ok) {
           throw new Error(`HTTP ${response.status}`);
         }
-  
+
         const data = await response.json();
-  
+
         const results = internet.querySelectorAll(
           ".network-speed-result strong"
         );
-  
+
         const status = internet.querySelector(".network-speed-status");
         const button = internet.querySelector(".network-speed-button");
         const progress = internet.querySelector(".network-speed-progress");
-  
+
         if (results.length !== 2 || !status || !button || !progress) {
           return;
         }
-  
+
         // Preserve the last successful measurements while a test runs.
         const download = data.result?.download_mbps;
         const upload = data.result?.upload_mbps;
-  
+
         results[0].textContent = Number.isFinite(download)
           ? `${download.toFixed(2)} Mbps`
           : "— Mbps";
-  
+
         results[1].textContent = Number.isFinite(upload)
-          ? `${upload.toFixed(2)} Mbps`
-          : "— Mbps";
-  
+            ? `${upload.toFixed(2)} Mbps`
+            : "— Mbps";
+
         const running = data.state === "running";
-  
+        speedtestIsRunning = running;
+
+        const stages = ["connecting", "download", "upload", "complete"];
+        const currentStage = stages.indexOf(data.stage);
+
+        const stageElements = progress.querySelectorAll(".speedtest-stage");
+        const liveLabel = progress.querySelector(".speedtest-live-label");
+        const liveValue = progress.querySelector(".speedtest-live-value");
+        const progressFill = progress.querySelector(".speedtest-progress-fill");
+        const progressPercent = progress.querySelector(".speedtest-progress-percent");
+
+        const percentage = Math.round(
+            Math.max(0, Math.min(1, Number(data.progress) || 0)) * 100
+        );
+
+        stageElements.forEach((element, index) => {
+            const completed = (
+                data.state === "completed" ||
+                (running && currentStage > index)
+            );
+
+            const active = running && currentStage === index;
+
+            element.classList.toggle("is-complete", completed);
+            element.classList.toggle("is-active", active);
+        });
+
+        if (running) {
+            const labels = {
+                connecting: "Connecting to test server",
+                download: "Downloading",
+                upload: "Uploading",
+            };
+
+            liveLabel.textContent = labels[data.stage] || "Testing";
+
+            liveValue.textContent = Number.isFinite(data.current_mbps)
+                ? `${data.current_mbps.toFixed(2)} Mbps`
+                : "—";
+
+            progressFill.style.width = `${percentage}%`;
+            progressPercent.textContent = `${percentage}%`;
+        } else {
+            liveLabel.textContent = data.state === "completed"
+                ? "Test completed"
+                : "Waiting for test";
+
+            liveValue.textContent = "—";
+            progressFill.style.width = data.state === "completed" ? "100%" : "0%";
+            progressPercent.textContent = data.state === "completed" ? "100%" : "0%";
+        }
+
         // Use the actual backend state, not simulated progress.
         if (running) {
-          status.textContent = "Speed test in progress";
-          progress.textContent = "Connecting / testing…";
+            status.textContent = "Speed test in progress";
         } else if (data.state === "failed") {
-          status.textContent = "Last test failed";
-          progress.textContent = data.error || "Speed test failed";
+            status.textContent = "Last test failed";
         } else if (data.state === "interrupted") {
-          status.textContent = "Previous test interrupted";
-          progress.textContent = "Waiting for next test";
+            status.textContent = "Previous test interrupted";
         } else if (data.result?.timestamp) {
-          const completed = new Date(data.result.timestamp);
-  
-          status.textContent = Number.isNaN(completed.getTime())
-            ? "Last test completed"
-            : `Last tested ${completed.toLocaleString()}`;
-  
-          progress.textContent = "Connect  ·  Download  ·  Upload  ·  Complete";
+            const completed = new Date(data.result.timestamp);
+
+            status.textContent = Number.isNaN(completed.getTime())
+                ? "Last test completed"
+                : `Last tested ${completed.toLocaleString()}`;
         } else {
-          status.textContent = "No speed tests recorded";
-          progress.textContent = "Waiting for first test";
+            status.textContent = "No speed tests recorded";
         }
-  
-        // Respect the backend's ten-minute cooldown.
+
         const finished = Date.parse(data.finished_at);
+        const cooldownEnds = finished + 10 * 60 * 1000;
+        const remainingMs = cooldownEnds - Date.now();
+
+		speedtestCooldownEnds = Number.isFinite(finished)
+		    ? cooldownEnds
+		    : null;
+
         const cooldownActive = (
-          Number.isFinite(finished) &&
-          Date.now() - finished < 10 * 60 * 1000
+            Number.isFinite(finished) &&
+            remainingMs > 0
         );
-  
+
+        const remainingSeconds = Math.ceil(
+            Math.max(0, remainingMs) / 1000
+        );
+
+        const minutes = Math.floor(remainingSeconds / 60);
+        const seconds = remainingSeconds % 60;
+
+        const cooldownText = cooldownActive
+            ? `Available in ${minutes}:${String(seconds).padStart(2, "0")}`
+            : "Ready now";
+
+        if (!running && data.result?.timestamp) {
+            status.dataset.lastTested = status.textContent;
+            updateSpeedtestCountdown();
+        } else {
+            delete status.dataset.lastTested;
+        }
+
         const requested = button.dataset.requested === "true";
-        
+
         button.disabled = running || cooldownActive || requested;
-        
+
         button.textContent = running
             ? "Testing…"
             : cooldownActive
@@ -1699,20 +1805,66 @@ function applyTailscaleTooltips() {
                 : requested
                     ? "Starting…"
                     : "Run Speed Test";
-        
+
         button.title = running
             ? "Speed test already running"
             : cooldownActive
                 ? "Available 10 minutes after the previous test"
                 : "Run an internet speed test";
-  
+
       } catch (error) {
         console.warn("Speed test status update failed:", error);
       } finally {
         speedtestRequestInFlight = false;
       }
     }
-  
+
+  let speedtestCooldownEnds = null;
+
+  function updateSpeedtestCountdown() {
+      if (!Number.isFinite(speedtestCooldownEnds)) return;
+
+      const card = getNetworkTrafficCard();
+      const status = card?.querySelector(".network-speed-status");
+
+      if (!status) return;
+
+      const remainingSeconds = Math.ceil(
+          Math.max(0, speedtestCooldownEnds - Date.now()) / 1000
+      );
+
+      const minutes = Math.floor(remainingSeconds / 60);
+      const seconds = remainingSeconds % 60;
+
+      const countdown = remainingSeconds > 0
+          ? `Available in ${minutes}:${String(seconds).padStart(2, "0")}`
+          : "Ready now";
+
+      const lastTested = status.dataset.lastTested;
+
+      if (lastTested) {
+          status.textContent = `${lastTested} · ${countdown}`;
+      }
+  }
+
+  let speedtestPollTimer = null;
+
+  async function pollSpeedtest() {
+      const card = getNetworkTrafficCard();
+      const internet = card?.querySelector(".network-internet");
+
+      if (!internet) {
+          speedtestPollTimer = setTimeout(pollSpeedtest, 250);
+          return;
+      }
+
+      await updateSpeedtest();
+
+      const interval = speedtestIsRunning ? 500 : 5000;
+
+      speedtestPollTimer = setTimeout(pollSpeedtest, interval);
+  }
+
   function customize() {
     customizeTailscale();
     customizeNetworkTraffic();
@@ -1775,7 +1927,7 @@ function applyTailscaleTooltips() {
 	updateTailscaleTooltips();
 
 	updateNetworkTraffic();
-	updateSpeedtest();
+	pollSpeedtest();
 
   setInterval(
     updateTailscaleTooltips,
@@ -1788,14 +1940,14 @@ function applyTailscaleTooltips() {
   );
 
   setInterval(
-    updateSpeedtest,
-    5000
-  );
-  
-  setInterval(
     updateTailscaleStats,
     100
   );
+
+    setInterval(
+        updateSpeedtestCountdown,
+        1000
+    );
 
     setInterval(
       fetchInternetStatus,

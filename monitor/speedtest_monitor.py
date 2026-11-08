@@ -6,6 +6,8 @@ import logging
 import os
 import subprocess
 import time
+import queue
+import threading
 
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -21,6 +23,7 @@ CHECK_INTERVAL = 5
 TEST_INTERVAL = 6 * 60 * 60
 TEST_TIMEOUT = 120
 MANUAL_COOLDOWN = 10 * 60
+PROGRESS_WRITE_INTERVAL = 0.5
 
 logging.basicConfig(
     level=logging.INFO,
@@ -69,26 +72,119 @@ def run_speedtest(status):
 
     status["state"] = "running"
     status["stage"] = "connecting"
+    status["progress"] = 0.0
+    status["current_mbps"] = None
     status["started_at"] = iso_now()
+    status["finished_at"] = None
     status["error"] = None
     save_status(status)
 
     try:
-        result = subprocess.run(
-            [
-                str(SPEEDTEST_BIN),
-                "--format=json",
-                "--progress=no",
-            ],
-            capture_output=True,
+        command = [
+            str(SPEEDTEST_BIN),
+            "--format=jsonl",
+            "--progress=yes",
+            "--progress-update-interval=250",
+        ]
+
+        process = subprocess.Popen(
+            command,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.DEVNULL,
             text=True,
-            timeout=TEST_TIMEOUT,
-            check=True,
+            bufsize=1,
         )
 
-        data = json.loads(result.stdout)
+        events = queue.Queue()
 
-        if data.get("type") != "result":
+        def read_output():
+            for line in process.stdout:
+                events.put(line)
+            events.put(None)
+
+        reader = threading.Thread(target=read_output, daemon=True)
+        reader.start()
+
+        data = None
+        deadline = time.monotonic() + TEST_TIMEOUT
+        last_status_write = time.monotonic()
+
+        try:
+            while True:
+                remaining = deadline - time.monotonic()
+
+                if remaining <= 0:
+                    raise subprocess.TimeoutExpired(command, TEST_TIMEOUT)
+
+                try:
+                    line = events.get(timeout=remaining)
+                except queue.Empty:
+                    raise subprocess.TimeoutExpired(command, TEST_TIMEOUT)
+
+                if line is None:
+                    break
+
+                event = json.loads(line)
+                event_type = event.get("type")
+
+                if event_type in ("testStart", "ping"):
+                    stage = "connecting"
+                    details = event.get("ping", {})
+                elif event_type in ("download", "upload"):
+                    stage = event_type
+                    details = event.get(event_type, {})
+                elif event_type == "result":
+                    data = event
+                    continue
+                else:
+                    continue
+
+                previous_stage = status["stage"]
+                status["stage"] = stage
+
+                if event_type == "testStart":
+                    status["progress"] = 0.0
+                else:
+                    status["progress"] = max(
+                        0.0,
+                        min(1.0, float(details.get("progress", 0.0))),
+                    )
+
+                if stage in ("download", "upload"):
+                    status["current_mbps"] = round(
+                        details.get("bandwidth", 0) * 8 / 1_000_000,
+                        2,
+                    )
+                else:
+                    status["current_mbps"] = None
+
+                now = time.monotonic()
+
+                if (
+                    stage != previous_stage
+                    or now - last_status_write >= PROGRESS_WRITE_INTERVAL
+                ):
+                    save_status(status)
+                    last_status_write = now
+
+            remaining = deadline - time.monotonic()
+
+            if remaining <= 0:
+                raise subprocess.TimeoutExpired(command, TEST_TIMEOUT)
+
+            return_code = process.wait(timeout=remaining)
+
+            if return_code != 0:
+                raise subprocess.CalledProcessError(return_code, command)
+
+        finally:
+            if process.poll() is None:
+                process.kill()
+
+            process.wait()
+            reader.join(timeout=1)
+
+        if data is None:
             raise ValueError("Speedtest returned no result")
 
         download_mbps = data["download"]["bandwidth"] * 8 / 1_000_000
@@ -108,6 +204,8 @@ def run_speedtest(status):
 
         status["state"] = "completed"
         status["stage"] = "complete"
+        status["progress"] = 1.0
+        status["current_mbps"] = None
 
         logging.info(
             "Speedtest complete: %.2f Mbps down, %.2f Mbps up",
@@ -125,6 +223,8 @@ def run_speedtest(status):
     ) as exc:
         status["state"] = "failed"
         status["stage"] = "error"
+        status["progress"] = 0.0
+        status["current_mbps"] = None
         status["error"] = str(exc)[:500]
 
         logging.error("Speedtest failed: %s", exc)
@@ -156,6 +256,8 @@ def main():
     if status.get("state") == "running":
         status["state"] = "interrupted"
         status["stage"] = "error"
+        status["progress"] = 0.0
+        status["current_mbps"] = None
         status["error"] = "Speedtest interrupted by service restart"
 
     if not parse_timestamp(status.get("next_test_at")):
@@ -165,6 +267,8 @@ def main():
 
     status.setdefault("state", "idle")
     status.setdefault("stage", "idle")
+    status.setdefault("progress", 0.0)
+    status.setdefault("current_mbps", None)
     status.setdefault("result", None)
     status.setdefault("error", None)
 
