@@ -44,7 +44,8 @@ services:
     container_name: dashboard-proxy
     restart: unless-stopped
     ports:
-      - "3000:3000"
+      - "192.168.0.2:3000:3000"
+      - "100.93.56.57:3000:3000"
     volumes:
       - ./proxy/Caddyfile:/etc/caddy/Caddyfile:ro
     depends_on:

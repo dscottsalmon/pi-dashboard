@@ -1,4 +1,10 @@
 :3000 {
+
+    log {
+        output stdout
+        format json
+    }
+    
     handle /internet-status {
         rewrite * /status
         reverse_proxy internet-status:8080
@@ -24,7 +30,7 @@
 	@speedtestAllowed {
 	        path /speedtest/run
 	        method POST
-	        remote_ip 192.168.0.0/24 100.64.0.0/10
+	        remote_ip 127.0.0.1/8 ::1 192.168.0.0/24 100.64.0.0/10 172.18.0.1
 	    }
 	
 	    handle @speedtestAllowed {
