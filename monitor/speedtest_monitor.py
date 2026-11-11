@@ -66,11 +66,12 @@ def parse_timestamp(value):
         return None
 
 
-def run_speedtest(status):
+def run_speedtest(status, trigger):
     """Run Ookla Speedtest and persist the result."""
     logging.info("Starting internet speed test")
 
     status["state"] = "running"
+    status["trigger"] = trigger
     status["stage"] = "connecting"
     status["progress"] = 0.0
     status["current_mbps"] = None
@@ -304,7 +305,8 @@ def main():
                 manual_requested = False
 
         if automatic_due or manual_requested:
-            status = run_speedtest(status)
+            trigger = "manual" if manual_requested else "automatic"
+            status = run_speedtest(status, trigger)
 
         time.sleep(CHECK_INTERVAL)
 

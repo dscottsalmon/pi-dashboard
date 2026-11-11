@@ -924,12 +924,15 @@ function createNetworkTrafficGraph(history, containerWidth) {
   const plotWidth = width - left - right;
   const plotHeight = height - top - bottom;
 
+  // Minimum Y-axis scale prevents idle traffic from appearing exaggerated.
+  const minimumScale = 512 * 1024; // 256 KiB/s
+  
   const maximum = Math.max(
-    1,
-    ...samples.flatMap(sample => [
-      sample.rx_bytes_per_sec,
-      sample.tx_bytes_per_sec
-    ])
+      minimumScale,
+      ...samples.flatMap(sample => [
+          sample.rx_bytes_per_sec,
+          sample.tx_bytes_per_sec
+      ])
   );
 
   // Choose a shared scale for RX and TX.
@@ -1473,13 +1476,50 @@ function applyTailscaleTooltips() {
               const value = document.createElement("strong");
               value.textContent = "— Mbps";
 
-              result.append(name, value);
+              const converted = document.createElement("span");
+              converted.className = "network-speed-converted";
+              converted.textContent = "— MB/s";
+
+              result.append(name, value, converted);
               speeds.appendChild(result);
           }
 
           const status = document.createElement("div");
           status.className = "network-speed-status";
-          status.textContent = "No speed tests recorded";
+
+          const lastTest = document.createElement("div");
+          lastTest.className = "network-speed-status-row";
+
+          const lastTestLabel = document.createElement("span");
+          lastTestLabel.textContent = "Last tested";
+
+          const lastTestDetails = document.createElement("div");
+          lastTestDetails.className = "network-speed-status-details";
+
+          const lastTestTime = document.createElement("span");
+          lastTestTime.className = "network-speed-last-test";
+          lastTestTime.textContent = "Never";
+
+          const lastTestTrigger = document.createElement("span");
+          lastTestTrigger.className = "network-speed-trigger";
+          lastTestTrigger.textContent = "Unknown";
+          lastTestTrigger.hidden = true;
+
+          lastTestDetails.append(lastTestTrigger, lastTestTime);
+          lastTest.append(lastTestLabel, lastTestDetails);
+
+          const nextTest = document.createElement("div");
+          nextTest.className = "network-speed-status-row";
+
+          const nextTestLabel = document.createElement("span");
+          nextTestLabel.textContent = "Next automatic test";
+
+          const nextTestTime = document.createElement("span");
+          nextTestTime.className = "network-speed-next-test";
+          nextTestTime.textContent = "Not scheduled";
+
+          nextTest.append(nextTestLabel, nextTestTime);
+          status.append(lastTest, nextTest);
 
           const button = document.createElement("button");
           button.className = "network-speed-button";
@@ -1673,12 +1713,20 @@ function applyTailscaleTooltips() {
           ".network-speed-result strong"
         );
 
+        const convertedResults = internet.querySelectorAll(
+          ".network-speed-converted"
+        );
+
         const status = internet.querySelector(".network-speed-status");
+        const lastTestTime = status?.querySelector(".network-speed-last-test");
+        const lastTestTrigger = status?.querySelector(".network-speed-trigger");
+        const nextTestTime = status?.querySelector(".network-speed-next-test");
         const button = internet.querySelector(".network-speed-button");
         const progress = internet.querySelector(".network-speed-progress");
 
-        if (results.length !== 2 || !status || !button || !progress) {
-          return;
+        if (results.length !== 2 || convertedResults.length !== 2 ||
+            !status || !button || !progress || !lastTestTime || !lastTestTrigger || !nextTestTime) {
+            return;
         }
 
         // Preserve the last successful measurements while a test runs.
@@ -1692,6 +1740,14 @@ function applyTailscaleTooltips() {
         results[1].textContent = Number.isFinite(upload)
             ? `${upload.toFixed(2)} Mbps`
             : "— Mbps";
+
+        convertedResults[0].textContent = Number.isFinite(download)
+            ? `${(download / 8).toFixed(2)} MB/s`
+            : "— MB/s";
+
+        convertedResults[1].textContent = Number.isFinite(upload)
+            ? `${(upload / 8).toFixed(2)} MB/s`
+            : "— MB/s";
 
         const running = data.state === "running";
         speedtestIsRunning = running;
@@ -1741,27 +1797,45 @@ function applyTailscaleTooltips() {
                 ? "Test completed"
                 : "Waiting for test";
 
-            liveValue.textContent = "—";
+            liveValue.textContent = data.state === "completed" ? "" : "—";
             progressFill.style.width = data.state === "completed" ? "100%" : "0%";
             progressPercent.textContent = data.state === "completed" ? "100%" : "0%";
         }
 
-        // Use the actual backend state, not simulated progress.
-        if (running) {
-            status.textContent = "Speed test in progress";
-        } else if (data.state === "failed") {
-            status.textContent = "Last test failed";
-        } else if (data.state === "interrupted") {
-            status.textContent = "Previous test interrupted";
-        } else if (data.result?.timestamp) {
-            const completed = new Date(data.result.timestamp);
+        // Display the most recent test and its origin.
+        const lastTimestamp = data.finished_at || data.result?.timestamp;
+        const lastDate = lastTimestamp ? new Date(lastTimestamp) : null;
 
-            status.textContent = Number.isNaN(completed.getTime())
-                ? "Last test completed"
-                : `Last tested ${completed.toLocaleString()}`;
+        if (running) {
+            lastTestTime.textContent = "Test in progress";
+        } else if (data.state === "failed") {
+            lastTestTime.textContent = "Last test failed";
+        } else if (data.state === "interrupted") {
+            lastTestTime.textContent = "Previous test interrupted";
+        } else if (lastDate && !Number.isNaN(lastDate.getTime())) {
+            lastTestTime.textContent = formatSpeedtestTime(lastDate);
         } else {
-            status.textContent = "No speed tests recorded";
+            lastTestTime.textContent = "Never";
         }
+
+        const trigger = data.trigger;
+
+        lastTestTrigger.hidden = trigger !== "manual" && trigger !== "automatic";
+
+        if (!lastTestTrigger.hidden) {
+            lastTestTrigger.textContent =
+                trigger === "manual" ? "Manual" : "Automatic";
+        }
+
+        // Display the next scheduled automatic test.
+        const nextDate = data.next_test_at
+            ? new Date(data.next_test_at)
+            : null;
+
+        nextTestTime.textContent =
+            nextDate && !Number.isNaN(nextDate.getTime())
+                ? formatSpeedtestTime(nextDate)
+                : "Not scheduled";
 
         const finished = Date.parse(data.finished_at);
         const cooldownEnds = finished + 10 * 60 * 1000;
@@ -1788,10 +1862,7 @@ function applyTailscaleTooltips() {
             : "Ready now";
 
         if (!running && data.result?.timestamp) {
-            status.dataset.lastTested = status.textContent;
             updateSpeedtestCountdown();
-        } else {
-            delete status.dataset.lastTested;
         }
 
         const requested = button.dataset.requested === "true";
@@ -1801,7 +1872,7 @@ function applyTailscaleTooltips() {
         button.textContent = running
             ? "Testing…"
             : cooldownActive
-                ? "Cooldown Active"
+                ? cooldownText
                 : requested
                     ? "Starting…"
                     : "Run Speed Test";
@@ -1821,30 +1892,73 @@ function applyTailscaleTooltips() {
 
   let speedtestCooldownEnds = null;
 
+  function formatSpeedtestTime(date) {
+      const now = new Date();
+
+      const today = new Date(
+          now.getFullYear(),
+          now.getMonth(),
+          now.getDate()
+      );
+
+      const target = new Date(
+          date.getFullYear(),
+          date.getMonth(),
+          date.getDate()
+      );
+
+      const dayDifference = Math.round(
+          (Date.UTC(target.getFullYear(), target.getMonth(), target.getDate()) -
+           Date.UTC(today.getFullYear(), today.getMonth(), today.getDate())) /
+          86400000
+      );
+
+      const time = date.toLocaleTimeString([], {
+          hour: "numeric",
+          minute: "2-digit",
+      });
+
+      if (dayDifference === 0) return `Today, ${time}`;
+      if (dayDifference === 1) return `Tomorrow, ${time}`;
+      if (dayDifference === -1) return `Yesterday, ${time}`;
+
+      return `${date.toLocaleDateString([], {
+          month: "short",
+          day: "numeric",
+      })}, ${time}`;
+  }
+
   function updateSpeedtestCountdown() {
       if (!Number.isFinite(speedtestCooldownEnds)) return;
 
       const card = getNetworkTrafficCard();
-      const status = card?.querySelector(".network-speed-status");
+      const internet = card?.querySelector(".network-internet");
+      const button = internet?.querySelector(".network-speed-button");
 
-      if (!status) return;
+      if (
+          !button ||
+          speedtestIsRunning ||
+          button.dataset.requested === "true"
+      ) return;
 
       const remainingSeconds = Math.ceil(
           Math.max(0, speedtestCooldownEnds - Date.now()) / 1000
       );
 
+      if (remainingSeconds <= 0) {
+          button.textContent = "Run Speed Test";
+          button.disabled = false;
+          button.title = "Run an internet speed test";
+          return;
+      }
+
       const minutes = Math.floor(remainingSeconds / 60);
       const seconds = remainingSeconds % 60;
 
-      const countdown = remainingSeconds > 0
-          ? `Available in ${minutes}:${String(seconds).padStart(2, "0")}`
-          : "Ready now";
+      button.textContent =
+          `Available in ${minutes}:${String(seconds).padStart(2, "0")}`;
 
-      const lastTested = status.dataset.lastTested;
-
-      if (lastTested) {
-          status.textContent = `${lastTested} · ${countdown}`;
-      }
+      button.disabled = true;
   }
 
   let speedtestPollTimer = null;

@@ -627,7 +627,7 @@
 .network-ethernet .network-traffic-graph {
     display: block;
     width: 100%;
-    height: 240px;
+    height: 285px;
 }
 
 .network-speed-results {
@@ -639,7 +639,7 @@
 .network-speed-result {
     display: flex;
     flex-direction: column;
-    gap: 8px;
+    gap: 6px;
     padding: 12px;
     border: 1px solid #475569;
     border-radius: 8px;
@@ -652,6 +652,13 @@
     font-size: 20px;
 }
 
+.network-speed-converted {
+    color: #94a3b8;
+    font-size: 12px;
+    font-weight: 400;
+    font-variant-numeric: tabular-nums;
+}
+
 .network-speed-status {
     margin-top: 14px;
     padding: 12px;
@@ -661,18 +668,96 @@
     font-size: 12px;
 }
 
-.network-speed-button {
-    margin-top: 10px;
-    padding: 9px 14px;
-    border-radius: 8px;
-    background: #4f46e5;
-    color: white;
+.network-speed-status {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.network-speed-status-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
     font-size: 12px;
 }
 
+.network-speed-status-row > span:first-child {
+    color: #94a3b8;
+}
+
+.network-speed-status-details {
+    display: inline-flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 8px;
+    min-width: 0;
+}
+
+.network-speed-last-test,
+.network-speed-next-test {
+    color: #e2e8f0;
+    font-variant-numeric: tabular-nums;
+    text-align: right;
+}
+
+.network-speed-trigger {
+    padding: 3px 8px;
+    border-radius: 999px;
+    background: #334155;
+    color: #c4b5fd;
+    font-size: 11px;
+    font-weight: 500;
+    white-space: nowrap;
+}
+
+.network-speed-trigger[hidden] {
+    display: none;
+}
+
+.network-speed-button {
+    display: block;
+    width: 100%;
+    margin-top: 12px;
+    padding: 13px 18px;
+    border: 1px solid #6366f1;
+    border-radius: 8px;
+    background: #4f46e5;
+    color: #ffffff;
+    font-size: 13px;
+    font-weight: 600;
+    text-align: center;
+    cursor: pointer;
+    transition:
+        background-color 0.18s ease,
+        border-color 0.18s ease,
+        box-shadow 0.18s ease,
+        transform 0.12s ease;
+}
+
+.network-speed-button:not(:disabled):hover {
+    background: #6366f1;
+    border-color: #818cf8;
+    box-shadow: 0 0 12px rgba(99, 102, 241, 0.3);
+}
+
+.network-speed-button:not(:disabled):active {
+    background: #4338ca;
+    transform: scale(0.985);
+}
+
+.network-speed-button:focus-visible {
+    outline: 2px solid #a5b4fc;
+    outline-offset: 3px;
+}
+
 .network-speed-button:disabled {
-    opacity: 0.45;
+    background: #373b59;
+    border-color: #475569;
+    color: #94a3b8;
+    opacity: 0.8;
     cursor: not-allowed;
+    box-shadow: none;
 }
 
 .network-speed-progress {
